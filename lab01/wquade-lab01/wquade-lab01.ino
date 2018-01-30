@@ -21,7 +21,10 @@
  *              It is associated with specific event. The robot could get stuck and it could run continuously (unbounded)
  */
 
+// Keep track of gyro position to update the LED color.
 int gyroDirection = 0;
+
+// Store LED values for sharing of a pin between button and LED.
 uint8_t redValue = 0;
 uint8_t greenValue = 0;
 uint8_t blueValue = 0;
@@ -173,12 +176,14 @@ void TaskChangeLed(void *pvParameters) {
    // Task loop here
    while(1) {
     if(gyroDirection >= 0) {
+      // Green
       redValue = 0;
       greenValue = 220;
       blueValue = 0;
       SetPixelRGB( 4, redValue, greenValue, blueValue);
       SetPixelRGB( 5, redValue, greenValue, blueValue);
     } else {
+      // Red
       redValue = 220;
       greenValue = 0;
       blueValue = 0;      
