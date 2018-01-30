@@ -1,0 +1,659 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta content="text/html; charset=ISO-8859-1" http-equiv="content-type">
+  <title>File Compare</title>
+  <style type="text/css">
+  #page {
+    font-family: sans-serif;
+  }
+  table {
+    border-collapse: collapse;
+  }
+  td {
+    white-space: nowrap;
+    font-family: monospace;
+    font-size: x-small;
+    vertical-align: top;
+  }
+  td.fileName {
+    background: #E6E6E6;
+    font-family: sans-serif;
+    font-size: small;
+  }
+  td.lineNumber {
+    text-align: right;
+    background: #FFC800;
+  }
+  td.added {
+    background: #BEF0BE;
+  }
+  td.removed {
+    background: #C8C8FF;
+  }
+  td.changed {
+    background: #FFC8C8;
+  }
+  td.equal {
+    background: #FFFFFF;
+  }
+  td.empty {
+    background: #F2F2F2;
+  }
+  </style>
+  <link rel="stylesheet" href="style.css" type="text/css">
+</head>
+<body>
+  <table>
+    <tr>
+      <td colspan="2" class="filename">wquade-lab01.ino&nbsp;(Before)</td>
+      <td colspan="2" class="filename">wquade-lab01.ino</td>
+    </tr>
+      <tr>
+<td class="lineNumber">1</td><td class="equal">#include&nbsp;&lt;Arduino_FreeRTOS.h&gt;</td><td class="lineNumber">1</td><td class="equal">#include&nbsp;&lt;Arduino_FreeRTOS.h&gt;</td>
+      </tr>
+      <tr>
+<td class="lineNumber">2</td><td class="equal">#include&nbsp;&quot;RingoHardware.h&quot;</td><td class="lineNumber">2</td><td class="equal">#include&nbsp;&quot;RingoHardware.h&quot;</td>
+      </tr>
+      <tr>
+<td class="lineNumber">3</td><td class="equal"></td><td class="lineNumber">3</td><td class="equal"></td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">4</td><td class="added">/*&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">5</td><td class="added">&nbsp;*&nbsp;&nbsp;CSCE&nbsp;496&nbsp;lab&nbsp;2:</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">6</td><td class="added">&nbsp;*&nbsp;&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">7</td><td class="added">&nbsp;*&nbsp;&nbsp;Need&nbsp;tasks&nbsp;to&nbsp;show&nbsp;four&nbsp;aspects:&nbsp;visual,&nbsp;auditory,&nbsp;motor,&nbsp;and&nbsp;sensor.</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">8</td><td class="added">&nbsp;*&nbsp;&nbsp;Need&nbsp;two&nbsp;periodic&nbsp;tasks,&nbsp;-&gt;&nbsp;Task&nbsp;that&nbsp;is&nbsp;executed&nbsp;at&nbsp;regular&nbsp;interval.</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">9</td><td class="added">&nbsp;*&nbsp;&nbsp;one&nbsp;aperiodic&nbsp;task,&nbsp;-&gt;&nbsp;Irregular&nbsp;task,&nbsp;no&nbsp;upper&nbsp;bound,&nbsp;like&nbsp;related&nbsp;to&nbsp;event&nbsp;or&nbsp;specific&nbsp;situation.</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">10</td><td class="added">&nbsp;*&nbsp;&nbsp;and&nbsp;one&nbsp;sporadic&nbsp;task.&nbsp;-&gt;&nbsp;Irregular&nbsp;intervals,&nbsp;but&nbsp;with&nbsp;upper&nbsp;bound,&nbsp;like&nbsp;user&nbsp;invoked&nbsp;task&nbsp;(button&nbsp;press)</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">11</td><td class="added">&nbsp;*&nbsp;&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">12</td><td class="added">&nbsp;*&nbsp;&nbsp;Visual&nbsp;-&gt;&nbsp;Lights</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">13</td><td class="added">&nbsp;*&nbsp;&nbsp;Auditory&nbsp;-&gt;&nbsp;Beep</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">14</td><td class="added">&nbsp;*&nbsp;&nbsp;Motor&nbsp;-&gt;&nbsp;Move</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">15</td><td class="added">&nbsp;*&nbsp;&nbsp;Sensor&nbsp;-&gt;&nbsp;Gyroscope</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">16</td><td class="added">&nbsp;*&nbsp;&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">17</td><td class="added">&nbsp;*&nbsp;&nbsp;Sporadic&nbsp;-&gt;&nbsp;Button&nbsp;press&nbsp;triggers&nbsp;beep,&nbsp;bounded&nbsp;by&nbsp;the&nbsp;maximum&nbsp;press&nbsp;rate&nbsp;a&nbsp;human&nbsp;can&nbsp;do.&nbsp;(auditory)</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">18</td><td class="added">&nbsp;*&nbsp;&nbsp;Periodic&nbsp;-&gt;&nbsp;Motors&nbsp;change&nbsp;direction&nbsp;at&nbsp;regular&nbsp;interval.&nbsp;(motor)</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">19</td><td class="added">&nbsp;*&nbsp;&nbsp;Periodic&nbsp;-&gt;&nbsp;Sense&nbsp;gyroscope&nbsp;at&nbsp;a&nbsp;regular&nbsp;interval&nbsp;(sensor)</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">20</td><td class="added">&nbsp;*&nbsp;&nbsp;Aperodic&nbsp;-&gt;&nbsp;When&nbsp;gyroscope&nbsp;is&nbsp;within&nbsp;a&nbsp;certain&nbsp;range&nbsp;change&nbsp;LED&nbsp;color,&nbsp;sort&nbsp;of&nbsp;bounded,&nbsp;but&nbsp;also&nbsp;sort&nbsp;of&nbsp;not&nbsp;(visual<br>)</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">21</td><td class="added">&nbsp;*&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;It&nbsp;is&nbsp;associated&nbsp;with&nbsp;specific&nbsp;event.&nbsp;The&nbsp;robot&nbsp;could&nbsp;get&nbsp;stuck&nbsp;and&nbsp;it&nbsp;could&nbsp;run&nbsp;continuously&nbsp;(unbounded<br>)</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">22</td><td class="added">&nbsp;*/</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">23</td><td class="added"></td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">24</td><td class="added">//&nbsp;Keep&nbsp;track&nbsp;of&nbsp;gyro&nbsp;position&nbsp;to&nbsp;update&nbsp;the&nbsp;LED&nbsp;color.</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">25</td><td class="added">int&nbsp;gyroDirection&nbsp;=&nbsp;0;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">26</td><td class="added"></td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">27</td><td class="added">//&nbsp;Store&nbsp;LED&nbsp;values&nbsp;for&nbsp;sharing&nbsp;of&nbsp;a&nbsp;pin&nbsp;between&nbsp;button&nbsp;and&nbsp;LED.</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">28</td><td class="added">uint8_t&nbsp;redValue&nbsp;=&nbsp;0;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">29</td><td class="added">uint8_t&nbsp;greenValue&nbsp;=&nbsp;0;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">30</td><td class="added">uint8_t&nbsp;blueValue&nbsp;=&nbsp;0;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">31</td><td class="added"></td>
+      </tr>
+      <tr>
+<td class="lineNumber">4</td><td class="equal">//&nbsp;Define&nbsp;tasks</td><td class="lineNumber">32</td><td class="equal">//&nbsp;Define&nbsp;tasks</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">33</td><td class="added">void&nbsp;TaskBeep(void&nbsp;*pvParameters);&nbsp;//&nbsp;Sporadic&nbsp;auditory&nbsp;task,&nbsp;when&nbsp;the&nbsp;button&nbsp;is&nbsp;pressed</td>
+      </tr>
+      <tr>
+<td class="lineNumber">5</td><td class="changed">void&nbsp;TaskLab1(void&nbsp;*pvParameters);</td><td class="lineNumber">34</td><td class="changed">void&nbsp;TaskChangeDirection(void&nbsp;*pvParameters);&nbsp;//&nbsp;Periodic&nbsp;motor&nbsp;task</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">35</td><td class="added">void&nbsp;TaskSenseGyroscope(void&nbsp;*pvParamters);&nbsp;//&nbsp;Periodic&nbsp;sensor&nbsp;task</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">36</td><td class="added">void&nbsp;TaskChangeLed(void&nbsp;*pvParameters);&nbsp;//&nbsp;Aperodic&nbsp;visual&nbsp;task</td>
+      </tr>
+      <tr>
+<td class="lineNumber">6</td><td class="equal"></td><td class="lineNumber">37</td><td class="equal"></td>
+      </tr>
+      <tr>
+<td class="lineNumber">7</td><td class="equal">//&nbsp;Setup&nbsp;ringo&nbsp;stuff</td><td class="lineNumber">38</td><td class="equal">//&nbsp;Setup&nbsp;ringo&nbsp;stuff</td>
+      </tr>
+      <tr>
+<td class="lineNumber">8</td><td class="equal">void&nbsp;ringoSetup()&nbsp;{</td><td class="lineNumber">39</td><td class="equal">void&nbsp;ringoSetup()&nbsp;{</td>
+      </tr>
+      <tr>
+<td class="lineNumber">9</td><td class="changed">&nbsp;&nbsp;HardwareBegin();&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;//initialize&nbsp;Ringo's&nbsp;brain&nbsp;to&nbsp;work&nbsp;with&nbsp;his&nbsp;circuitry</td><td class="lineNumber">40</td><td class="changed">&nbsp;&nbsp;HardwareBegin();&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;//initialize&nbsp;Ringo's&nbsp;brain&nbsp;to&nbsp;work&nbsp;with&nbsp;his&nbsp;circuitry&nbsp;&nbsp;&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber">10</td><td class="changed">&nbsp;&nbsp;PlayStartChirp();&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;//Play&nbsp;startup&nbsp;chirp&nbsp;and&nbsp;blink&nbsp;eyes</td><td class="lineNumber">41</td><td class="changed">&nbsp;&nbsp;//PlayStartChirp();&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;//Play&nbsp;startup&nbsp;chirp&nbsp;and&nbsp;blink&nbsp;eyes</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">42</td><td class="added">&nbsp;&nbsp;//NavigationBegin();</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">43</td><td class="added">&nbsp;&nbsp;//SimpleGyroNavigation();&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber">11</td><td class="equal">&nbsp;&nbsp;SwitchMotorsToSerial();&nbsp;//Call&nbsp;&quot;SwitchMotorsToSerial()&quot;&nbsp;before&nbsp;using&nbsp;Serial.print&nbsp;functions&nbsp;as&nbsp;motors&nbsp;&amp;&nbsp;serial&nbsp;share&nbsp;a<br>&nbsp;line</td><td class="lineNumber">44</td><td class="equal">&nbsp;&nbsp;SwitchMotorsToSerial();&nbsp;//Call&nbsp;&quot;SwitchMotorsToSerial()&quot;&nbsp;before&nbsp;using&nbsp;Serial.print&nbsp;functions&nbsp;as&nbsp;motors&nbsp;&amp;&nbsp;serial&nbsp;share&nbsp;a<br>&nbsp;line</td>
+      </tr>
+      <tr>
+<td class="lineNumber">12</td><td class="equal">&nbsp;&nbsp;RestartTimer();&nbsp;&nbsp;</td><td class="lineNumber">45</td><td class="equal">&nbsp;&nbsp;RestartTimer();&nbsp;&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">46</td><td class="added">&nbsp;&nbsp;NavigationBegin();&nbsp;&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber">13</td><td class="equal">}</td><td class="lineNumber">47</td><td class="equal">}</td>
+      </tr>
+      <tr>
+<td class="lineNumber">14</td><td class="equal"></td><td class="lineNumber">48</td><td class="equal"></td>
+      </tr>
+      <tr>
+<td class="lineNumber">15</td><td class="equal">//&nbsp;Setup&nbsp;the&nbsp;tasks</td><td class="lineNumber">49</td><td class="equal">//&nbsp;Setup&nbsp;the&nbsp;tasks</td>
+      </tr>
+      <tr>
+<td class="lineNumber">16</td><td class="equal">void&nbsp;taskSetup()&nbsp;{</td><td class="lineNumber">50</td><td class="equal">void&nbsp;taskSetup()&nbsp;{</td>
+      </tr>
+      <tr>
+<td class="lineNumber">17</td><td class="changed">&nbsp;&nbsp;//&nbsp;Create&nbsp;lab&nbsp;1&nbsp;task</td><td class="lineNumber">51</td><td class="changed">&nbsp;&nbsp;//&nbsp;Create&nbsp;tasks&nbsp;&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">52</td><td class="added">&nbsp;&nbsp;xTaskCreate(</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">53</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;TaskChangeDirection,&nbsp;//&nbsp;task&nbsp;function</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">54</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;(const&nbsp;portCHAR&nbsp;*)&quot;ChangeDirection&quot;,&nbsp;//&nbsp;task&nbsp;name&nbsp;string</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">55</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;100,&nbsp;//&nbsp;stack&nbsp;size</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">56</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;NULL,&nbsp;//&nbsp;nothing</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">57</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;3,&nbsp;//&nbsp;Priority,&nbsp;0&nbsp;is&nbsp;lowest</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">58</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;NULL);&nbsp;//&nbsp;nothing</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">59</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber">18</td><td class="equal">&nbsp;&nbsp;xTaskCreate(</td><td class="lineNumber">60</td><td class="equal">&nbsp;&nbsp;xTaskCreate(</td>
+      </tr>
+      <tr>
+<td class="lineNumber">19</td><td class="changed">&nbsp;&nbsp;&nbsp;&nbsp;TaskLab1,&nbsp;//&nbsp;task&nbsp;function</td><td class="lineNumber">61</td><td class="changed">&nbsp;&nbsp;&nbsp;&nbsp;TaskSenseGyroscope,&nbsp;//&nbsp;task&nbsp;function</td>
+      </tr>
+      <tr>
+<td class="lineNumber">20</td><td class="changed">&nbsp;&nbsp;&nbsp;&nbsp;(const&nbsp;portCHAR&nbsp;*)&quot;Lab1&quot;,&nbsp;//&nbsp;task&nbsp;name&nbsp;string</td><td class="lineNumber">62</td><td class="changed">&nbsp;&nbsp;&nbsp;&nbsp;(const&nbsp;portCHAR&nbsp;*)&quot;SenseGyroscope&quot;,&nbsp;//&nbsp;task&nbsp;name&nbsp;string</td>
+      </tr>
+      <tr>
+<td class="lineNumber">21</td><td class="changed">&nbsp;&nbsp;&nbsp;&nbsp;128,&nbsp;//&nbsp;stack&nbsp;size</td><td class="lineNumber">63</td><td class="changed">&nbsp;&nbsp;&nbsp;&nbsp;100,&nbsp;//&nbsp;stack&nbsp;size</td>
+      </tr>
+      <tr>
+<td class="lineNumber">22</td><td class="equal">&nbsp;&nbsp;&nbsp;&nbsp;NULL,&nbsp;//&nbsp;nothing</td><td class="lineNumber">64</td><td class="equal">&nbsp;&nbsp;&nbsp;&nbsp;NULL,&nbsp;//&nbsp;nothing</td>
+      </tr>
+      <tr>
+<td class="lineNumber">23</td><td class="equal">&nbsp;&nbsp;&nbsp;&nbsp;2,&nbsp;//&nbsp;Priority,&nbsp;0&nbsp;is&nbsp;lowest</td><td class="lineNumber">65</td><td class="equal">&nbsp;&nbsp;&nbsp;&nbsp;2,&nbsp;//&nbsp;Priority,&nbsp;0&nbsp;is&nbsp;lowest</td>
+      </tr>
+      <tr>
+<td class="lineNumber">24</td><td class="equal">&nbsp;&nbsp;&nbsp;&nbsp;NULL);&nbsp;//&nbsp;nothing&nbsp;</td><td class="lineNumber">66</td><td class="equal">&nbsp;&nbsp;&nbsp;&nbsp;NULL);&nbsp;//&nbsp;nothing&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">67</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">68</td><td class="added">&nbsp;&nbsp;xTaskCreate(</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">69</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;TaskBeep,&nbsp;//&nbsp;task&nbsp;function</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">70</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;(const&nbsp;portCHAR&nbsp;*)&quot;Beep&quot;,&nbsp;//&nbsp;task&nbsp;name&nbsp;string</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">71</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;100,&nbsp;//&nbsp;stack&nbsp;size</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">72</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;NULL,&nbsp;//&nbsp;nothing</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">73</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;1,&nbsp;//&nbsp;Priority,&nbsp;0&nbsp;is&nbsp;lowest</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">74</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;NULL);&nbsp;//&nbsp;nothing&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">75</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">76</td><td class="added">&nbsp;&nbsp;xTaskCreate(</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">77</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;TaskChangeLed,&nbsp;//&nbsp;task&nbsp;function</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">78</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;(const&nbsp;portCHAR&nbsp;*)&quot;ChangeLed&quot;,&nbsp;//&nbsp;task&nbsp;name&nbsp;string</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">79</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;100,&nbsp;//&nbsp;stack&nbsp;size</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">80</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;NULL,&nbsp;//&nbsp;nothing</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">81</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;0,&nbsp;//&nbsp;Priority,&nbsp;0&nbsp;is&nbsp;lowest,&nbsp;aperodic,&nbsp;so&nbsp;it&nbsp;needs&nbsp;to&nbsp;be&nbsp;lowest&nbsp;priority&nbsp;so&nbsp;it&nbsp;doesn't&nbsp;starve&nbsp;others</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">82</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;NULL);&nbsp;//&nbsp;nothing&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber">25</td><td class="equal">}</td><td class="lineNumber">83</td><td class="equal">}</td>
+      </tr>
+      <tr>
+<td class="lineNumber">26</td><td class="equal"></td><td class="lineNumber">84</td><td class="equal"></td>
+      </tr>
+      <tr>
+<td class="lineNumber">27</td><td class="equal">//&nbsp;First&nbsp;run&nbsp;code</td><td class="lineNumber">85</td><td class="equal">//&nbsp;First&nbsp;run&nbsp;code</td>
+      </tr>
+      <tr>
+<td class="lineNumber">28</td><td class="equal">void&nbsp;setup(){</td><td class="lineNumber">86</td><td class="equal">void&nbsp;setup(){</td>
+      </tr>
+      <tr>
+<td class="lineNumber">29</td><td class="removed">&nbsp;&nbsp;Serial.begin(9600);&nbsp;//&nbsp;For&nbsp;debugging</td><td class="lineNumber"></td><td class="empty"></td>
+      </tr>
+      <tr>
+<td class="lineNumber">30</td><td class="equal">&nbsp;&nbsp;ringoSetup();&nbsp;//&nbsp;Setup&nbsp;ringo&nbsp;stuff</td><td class="lineNumber">87</td><td class="equal">&nbsp;&nbsp;ringoSetup();&nbsp;//&nbsp;Setup&nbsp;ringo&nbsp;stuff</td>
+      </tr>
+      <tr>
+<td class="lineNumber">31</td><td class="equal">&nbsp;&nbsp;taskSetup();&nbsp;//&nbsp;Setup&nbsp;the&nbsp;tasks</td><td class="lineNumber">88</td><td class="equal">&nbsp;&nbsp;taskSetup();&nbsp;//&nbsp;Setup&nbsp;the&nbsp;tasks</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">89</td><td class="added">&nbsp;&nbsp;Serial.begin(9600);&nbsp;//&nbsp;For&nbsp;debugging</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">90</td><td class="added">&nbsp;&nbsp;Serial.println(&quot;Setup&quot;);</td>
+      </tr>
+      <tr>
+<td class="lineNumber">32</td><td class="equal"></td><td class="lineNumber">91</td><td class="equal"></td>
+      </tr>
+      <tr>
+<td class="lineNumber">33</td><td class="equal">}</td><td class="lineNumber">92</td><td class="equal">}</td>
+      </tr>
+      <tr>
+<td class="lineNumber">34</td><td class="equal"></td><td class="lineNumber">93</td><td class="equal"></td>
+      </tr>
+      <tr>
+<td class="lineNumber">35</td><td class="equal">//&nbsp;Don't&nbsp;do&nbsp;anything&nbsp;here&nbsp;since&nbsp;the&nbsp;tasks&nbsp;do&nbsp;the&nbsp;work</td><td class="lineNumber">94</td><td class="equal">//&nbsp;Don't&nbsp;do&nbsp;anything&nbsp;here&nbsp;since&nbsp;the&nbsp;tasks&nbsp;do&nbsp;the&nbsp;work</td>
+      </tr>
+      <tr>
+<td class="lineNumber">36</td><td class="equal">void&nbsp;loop(){}</td><td class="lineNumber">95</td><td class="equal">void&nbsp;loop(){}</td>
+      </tr>
+      <tr>
+<td class="lineNumber">37</td><td class="equal"></td><td class="lineNumber">96</td><td class="equal"></td>
+      </tr>
+      <tr>
+<td class="lineNumber">38</td><td class="changed">//&nbsp;Lab&nbsp;1&nbsp;task&nbsp;code</td><td class="lineNumber">97</td><td class="changed">//&nbsp;Beep&nbsp;task&nbsp;code</td>
+      </tr>
+      <tr>
+<td class="lineNumber">39</td><td class="changed">void&nbsp;TaskLab1(void&nbsp;*pvParameters)&nbsp;{</td><td class="lineNumber">98</td><td class="changed">void&nbsp;TaskBeep(void&nbsp;*pvParameters)&nbsp;{</td>
+      </tr>
+      <tr>
+<td class="lineNumber">40</td><td class="equal">&nbsp;&nbsp;(void)&nbsp;pvParameters;</td><td class="lineNumber">99</td><td class="equal">&nbsp;&nbsp;(void)&nbsp;pvParameters;</td>
+      </tr>
+      <tr>
+<td class="lineNumber">41</td><td class="equal">&nbsp;&nbsp;/*</td><td class="lineNumber">100</td><td class="equal">&nbsp;&nbsp;/*</td>
+      </tr>
+      <tr>
+<td class="lineNumber">42</td><td class="changed">&nbsp;&nbsp;&nbsp;*&nbsp;A&nbsp;test&nbsp;task&nbsp;for&nbsp;lab&nbsp;1.</td><td class="lineNumber">101</td><td class="changed">&nbsp;&nbsp;&nbsp;*&nbsp;Sporadic&nbsp;auditory&nbsp;task,&nbsp;when&nbsp;the&nbsp;button&nbsp;is&nbsp;pressed</td>
+      </tr>
+      <tr>
+<td class="lineNumber">43</td><td class="changed">&nbsp;&nbsp;&nbsp;*&nbsp;It&nbsp;just&nbsp;makes&nbsp;a&nbsp;sound&nbsp;while&nbsp;turning&nbsp;on&nbsp;its&nbsp;lights,&nbsp;and&nbsp;repeats&nbsp;it&nbsp;every&nbsp;5&nbsp;seconds.</td><td class="lineNumber">102</td><td class="changed">&nbsp;&nbsp;&nbsp;*&nbsp;It&nbsp;just&nbsp;yields&nbsp;while&nbsp;waiting&nbsp;for&nbsp;it&nbsp;to&nbsp;detect&nbsp;that&nbsp;the&nbsp;button&nbsp;was&nbsp;pressed</td>
+      </tr>
+      <tr>
+<td class="lineNumber">44</td><td class="equal">&nbsp;&nbsp;&nbsp;*/</td><td class="lineNumber">103</td><td class="equal">&nbsp;&nbsp;&nbsp;*/</td>
+      </tr>
+      <tr>
+<td class="lineNumber">45</td><td class="equal"></td><td class="lineNumber">104</td><td class="equal"></td>
+      </tr>
+      <tr>
+<td class="lineNumber">46</td><td class="equal">&nbsp;&nbsp;&nbsp;//&nbsp;Task&nbsp;setup&nbsp;here&nbsp;(like&nbsp;set&nbsp;a&nbsp;pin&nbsp;mode)</td><td class="lineNumber">105</td><td class="equal">&nbsp;&nbsp;&nbsp;//&nbsp;Task&nbsp;setup&nbsp;here&nbsp;(like&nbsp;set&nbsp;a&nbsp;pin&nbsp;mode)</td>
+      </tr>
+      <tr>
+<td class="lineNumber">47</td><td class="changed"></td><td class="lineNumber">106</td><td class="changed">&nbsp;&nbsp;&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber">48</td><td class="equal">&nbsp;&nbsp;&nbsp;//&nbsp;Task&nbsp;loop&nbsp;here</td><td class="lineNumber">107</td><td class="equal">&nbsp;&nbsp;&nbsp;//&nbsp;Task&nbsp;loop&nbsp;here</td>
+      </tr>
+      <tr>
+<td class="lineNumber">49</td><td class="equal">&nbsp;&nbsp;&nbsp;while(1)&nbsp;{</td><td class="lineNumber">108</td><td class="equal">&nbsp;&nbsp;&nbsp;while(1)&nbsp;{</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">109</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;//&nbsp;The&nbsp;button&nbsp;and&nbsp;the&nbsp;LED's&nbsp;using&nbsp;the&nbsp;same&nbsp;pins&nbsp;really&nbsp;complicates&nbsp;things.</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">110</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;//&nbsp;I&nbsp;ended&nbsp;up&nbsp;storing&nbsp;and&nbsp;resstoring&nbsp;the&nbsp;RGB&nbsp;values&nbsp;so&nbsp;the&nbsp;lights&nbsp;appear&nbsp;to&nbsp;still&nbsp;be&nbsp;working.</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">111</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;SwitchPixelsToButton();</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">112</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;volatile&nbsp;int&nbsp;buttonStatus&nbsp;=&nbsp;digitalRead(7);</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">113</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;SetPixelRGB(&nbsp;4,&nbsp;redValue,&nbsp;greenValue,&nbsp;blueValue);</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">114</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;SetPixelRGB(&nbsp;5,&nbsp;redValue,&nbsp;greenValue,&nbsp;blueValue);&nbsp;&nbsp;&nbsp;&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">115</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;SwitchButtonToPixels();</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">116</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">117</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;if(buttonStatus&nbsp;==&nbsp;0)&nbsp;{</td>
+      </tr>
+      <tr>
+<td class="lineNumber">50</td><td class="changed">&nbsp;&nbsp;&nbsp;&nbsp;PlayChirp(1000,&nbsp;25);&nbsp;//&nbsp;Make&nbsp;a&nbsp;sound</td><td class="lineNumber">118</td><td class="changed">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;PlayChirp(1000,&nbsp;20);&nbsp;//&nbsp;Make&nbsp;a&nbsp;sound&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber">51</td><td class="removed">&nbsp;&nbsp;&nbsp;&nbsp;RandomEyes();&nbsp;//&nbsp;Turn&nbsp;on&nbsp;some&nbsp;lights</td><td class="lineNumber"></td><td class="empty"></td>
+      </tr>
+      <tr>
+<td class="lineNumber">52</td><td class="changed">&nbsp;&nbsp;&nbsp;&nbsp;vTaskDelay(1000&nbsp;/&nbsp;portTICK_PERIOD_MS);&nbsp;//&nbsp;Wait&nbsp;a&nbsp;bit&nbsp;(1s)</td><td class="lineNumber">119</td><td class="changed">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;vTaskDelay(500&nbsp;/&nbsp;portTICK_PERIOD_MS);&nbsp;//&nbsp;Give&nbsp;it&nbsp;half&nbsp;a&nbsp;second&nbsp;to&nbsp;play</td>
+      </tr>
+      <tr>
+<td class="lineNumber">53</td><td class="changed">&nbsp;&nbsp;&nbsp;&nbsp;OffChirp();&nbsp;//&nbsp;Turn&nbsp;off&nbsp;the&nbsp;sound</td><td class="lineNumber">120</td><td class="changed">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;OffChirp();&nbsp;//&nbsp;Turn&nbsp;off&nbsp;the&nbsp;sound&nbsp;&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber">54</td><td class="removed">&nbsp;&nbsp;&nbsp;&nbsp;OffEyes();&nbsp;//&nbsp;Turn&nbsp;off&nbsp;the&nbsp;lights</td><td class="lineNumber"></td><td class="empty"></td>
+      </tr>
+      <tr>
+<td class="lineNumber">55</td><td class="removed">&nbsp;&nbsp;&nbsp;&nbsp;vTaskDelay(5000&nbsp;/&nbsp;portTICK_PERIOD_MS);&nbsp;//&nbsp;Wait&nbsp;a&nbsp;bit&nbsp;longer&nbsp;(5s)</td><td class="lineNumber"></td><td class="empty"></td>
+      </tr>
+      <tr>
+<td class="lineNumber">56</td><td class="removed">&nbsp;&nbsp;&nbsp;}</td><td class="lineNumber"></td><td class="empty"></td>
+      </tr>
+      <tr>
+<td class="lineNumber">57</td><td class="changed">}</td><td class="lineNumber">121</td><td class="changed">&nbsp;&nbsp;&nbsp;&nbsp;}</td>
+      </tr>
+      <tr>
+<td class="lineNumber">58</td><td class="equal"></td><td class="lineNumber">122</td><td class="equal"></td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">123</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;vTaskDelay(250&nbsp;/&nbsp;portTICK_PERIOD_MS);&nbsp;//&nbsp;Upper&nbsp;bound&nbsp;since&nbsp;it's&nbsp;sporadic,&nbsp;if&nbsp;this&nbsp;isn't&nbsp;here&nbsp;the&nbsp;lights&nbsp;never&nbsp;change</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">124</td><td class="added">&nbsp;&nbsp;&nbsp;}</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">125</td><td class="added">}</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">126</td><td class="added"></td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">127</td><td class="added">//&nbsp;Change&nbsp;direction&nbsp;task&nbsp;code</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">128</td><td class="added">void&nbsp;TaskChangeDirection(void&nbsp;*pvParameters)&nbsp;{</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">129</td><td class="added">&nbsp;&nbsp;(void)&nbsp;pvParameters;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">130</td><td class="added">&nbsp;&nbsp;/*</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">131</td><td class="added">&nbsp;&nbsp;&nbsp;*&nbsp;Periodic&nbsp;motor&nbsp;task</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">132</td><td class="added">&nbsp;&nbsp;&nbsp;*&nbsp;It&nbsp;will&nbsp;change&nbsp;motor&nbsp;direction&nbsp;every&nbsp;second</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">133</td><td class="added">&nbsp;&nbsp;&nbsp;*/</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">134</td><td class="added"></td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">135</td><td class="added">&nbsp;&nbsp;&nbsp;//&nbsp;Task&nbsp;setup&nbsp;here&nbsp;(like&nbsp;set&nbsp;a&nbsp;pin&nbsp;mode)</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">136</td><td class="added"></td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">137</td><td class="added">&nbsp;&nbsp;&nbsp;//&nbsp;Task&nbsp;loop&nbsp;here</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">138</td><td class="added">&nbsp;&nbsp;&nbsp;while(1)&nbsp;{</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">139</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;Motors(32,&nbsp;0);</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">140</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;vTaskDelay(1000&nbsp;/&nbsp;portTICK_PERIOD_MS);&nbsp;//&nbsp;Wait&nbsp;a&nbsp;second</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">141</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;Motors(0,&nbsp;42);</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">142</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;vTaskDelay(1000&nbsp;/&nbsp;portTICK_PERIOD_MS);&nbsp;//&nbsp;Wait&nbsp;a&nbsp;second</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">143</td><td class="added">&nbsp;&nbsp;&nbsp;}</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">144</td><td class="added">}</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">145</td><td class="added"></td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">146</td><td class="added">//&nbsp;Sense&nbsp;gyroscope&nbsp;task&nbsp;code</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">147</td><td class="added">void&nbsp;TaskSenseGyroscope(void&nbsp;*pvParameters)&nbsp;{</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">148</td><td class="added">&nbsp;&nbsp;(void)&nbsp;pvParameters;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">149</td><td class="added">&nbsp;&nbsp;/*</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">150</td><td class="added">&nbsp;&nbsp;&nbsp;*&nbsp;Periodic&nbsp;sensor&nbsp;task</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">151</td><td class="added">&nbsp;&nbsp;&nbsp;*&nbsp;It&nbsp;will&nbsp;check&nbsp;the&nbsp;gyroscope&nbsp;position&nbsp;at&nbsp;a&nbsp;regular&nbsp;interval,&nbsp;and&nbsp;update&nbsp;a&nbsp;global&nbsp;variable&nbsp;with&nbsp;the&nbsp;position</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">152</td><td class="added">&nbsp;&nbsp;&nbsp;*/</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">153</td><td class="added"></td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">154</td><td class="added">&nbsp;&nbsp;&nbsp;//&nbsp;Task&nbsp;setup&nbsp;here&nbsp;(like&nbsp;set&nbsp;a&nbsp;pin&nbsp;mode)</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">155</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;NavigationBegin();//initialize&nbsp;and&nbsp;start&nbsp;navigation</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">156</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;RestartTimer();&nbsp;&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">157</td><td class="added">&nbsp;&nbsp;&nbsp;//&nbsp;Task&nbsp;loop&nbsp;here</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">158</td><td class="added">&nbsp;&nbsp;&nbsp;while(1)&nbsp;{</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">159</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;SimpleGyroNavigation();&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">160</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;gyroDirection&nbsp;=&nbsp;&nbsp;PresentHeading();</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">161</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;//Serial.println(gyroDirection);</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">162</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;vTaskDelay(250&nbsp;/&nbsp;portTICK_PERIOD_MS);&nbsp;//&nbsp;Schedule&nbsp;to&nbsp;run&nbsp;every&nbsp;250ms</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">163</td><td class="added">&nbsp;&nbsp;&nbsp;}</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">164</td><td class="added">}</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">165</td><td class="added"></td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">166</td><td class="added">//&nbsp;Change&nbsp;LED&nbsp;task&nbsp;code</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">167</td><td class="added">void&nbsp;TaskChangeLed(void&nbsp;*pvParameters)&nbsp;{</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">168</td><td class="added">&nbsp;&nbsp;(void)&nbsp;pvParameters;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">169</td><td class="added">&nbsp;&nbsp;/*</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">170</td><td class="added">&nbsp;&nbsp;&nbsp;*&nbsp;Aperodic&nbsp;visual&nbsp;task</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">171</td><td class="added">&nbsp;&nbsp;&nbsp;*&nbsp;It&nbsp;will&nbsp;change&nbsp;the&nbsp;LED&nbsp;color&nbsp;based&nbsp;on&nbsp;the&nbsp;gyroscope&nbsp;value.&nbsp;If&nbsp;the&nbsp;device&nbsp;moves&nbsp;fast&nbsp;it&nbsp;runs&nbsp;very&nbsp;often,&nbsp;otherwise&nbsp;n<br>ot&nbsp;as&nbsp;much</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">172</td><td class="added">&nbsp;&nbsp;&nbsp;*/</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">173</td><td class="added"></td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">174</td><td class="added">&nbsp;&nbsp;&nbsp;//&nbsp;Task&nbsp;setup&nbsp;here&nbsp;(like&nbsp;set&nbsp;a&nbsp;pin&nbsp;mode)</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">175</td><td class="added"></td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">176</td><td class="added">&nbsp;&nbsp;&nbsp;//&nbsp;Task&nbsp;loop&nbsp;here</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">177</td><td class="added">&nbsp;&nbsp;&nbsp;while(1)&nbsp;{</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">178</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;if(gyroDirection&nbsp;&gt;=&nbsp;0)&nbsp;{</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">179</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;//&nbsp;Green</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">180</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;redValue&nbsp;=&nbsp;0;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">181</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;greenValue&nbsp;=&nbsp;220;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">182</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;blueValue&nbsp;=&nbsp;0;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">183</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SetPixelRGB(&nbsp;4,&nbsp;redValue,&nbsp;greenValue,&nbsp;blueValue);</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">184</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SetPixelRGB(&nbsp;5,&nbsp;redValue,&nbsp;greenValue,&nbsp;blueValue);</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">185</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;}&nbsp;else&nbsp;{</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">186</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;//&nbsp;Red</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">187</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;redValue&nbsp;=&nbsp;220;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">188</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;greenValue&nbsp;=&nbsp;0;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">189</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;blueValue&nbsp;=&nbsp;0;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">190</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SetPixelRGB(&nbsp;4,&nbsp;redValue,&nbsp;greenValue,&nbsp;blueValue);</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">191</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SetPixelRGB(&nbsp;5,&nbsp;redValue,&nbsp;greenValue,&nbsp;blueValue);</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">192</td><td class="added">&nbsp;&nbsp;&nbsp;&nbsp;}</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">193</td><td class="added">&nbsp;&nbsp;&nbsp;}</td>
+      </tr>
+      <tr>
+<td class="lineNumber"></td><td class="empty"></td><td class="lineNumber">194</td><td class="added">}</td>
+      </tr>
+      <tr>
+<td class="lineNumber">59</td><td class="equal"></td><td class="lineNumber">195</td><td class="equal"></td>
+      </tr>
+      <tr>
+<td class="lineNumber">60</td><td class="equal"></td><td class="lineNumber">196</td><td class="equal"></td>
+      </tr>
+      <tr>
+<td class="lineNumber">61</td><td class="equal"></td><td class="lineNumber">197</td><td class="equal"></td>
+      </tr>
+  </table>
+</body>
