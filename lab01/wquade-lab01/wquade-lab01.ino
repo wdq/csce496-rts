@@ -2,7 +2,9 @@
 #include "RingoHardware.h"
 
 // Define tasks
-void TaskSenseGyroscope(void *pvParamters); // Periodic sensor task
+void TaskTurn90Degrees(void *pvParameters); // Turn 90 degrees
+void TaskDriveStraight(void *pvParameters); // Go straight
+void TaskDriveSquare(void *pvParameters);   // Drive in a square
 
 // Setup ringo stuff
 void ringoSetup() {
@@ -19,13 +21,30 @@ void ringoSetup() {
 void taskSetup() {
   // Create tasks        
   xTaskCreate(
-    TaskSenseGyroscope, // task function
-    (const portCHAR *)"SenseGyroscope", // task name string
-    100, // stack size
+    TaskTurn90Degrees, // task function
+    (const portCHAR *)"Turn90Degrees", // task name string
+    128, // stack size
     NULL, // nothing
     2, // Priority, 0 is lowest
-    NULL); // nothing     
+    NULL); // nothing
+    
+  xTaskCreate(
+    TaskDriveStraight, // task function
+    (const portCHAR *)"DriveStraight", // task name string
+    128, // stack size
+    NULL, // nothing
+    3, // Priority, 0 is lowest
+    NULL); // nothing   
+    
+  xTaskCreate(
+    TaskDriveSquare, // task function
+    (const portCHAR *)"DriveSquare", // task name string
+    128, // stack size
+    NULL, // nothing
+    1, // Priority, 0 is lowest
+    NULL); // nothing              
 }
+
 
 // First run code
 void setup(){
@@ -39,6 +58,8 @@ void setup(){
 // Don't do anything here since the tasks do the work
 void loop(){}
 
+bool isTurning90Degrees = false;
+bool isDrivingStraight = true;
 
 // Struct to hold PID controller parameters.
 struct PID {
@@ -55,53 +76,148 @@ struct PID {
 // Function to calculate PID output given set point, current value (process variable), and PID controller parameters.
 // todo: look into extending this to support combinations of P, I, D control instead of only all three together.
 // Based on this: https://gist.github.com/bradley219/5373998
-double CalculatePID(double setPoint, double processVariable, struct PID &pid) {
+double CalculatePID(double setPoint, double processVariable, struct PID *pid) {
   // Error
   double error = setPoint - processVariable;
 
   // Proportional
-  double proportionalOutput = pid.kp * error;
+  double proportionalOutput = pid->kp * error;
 
   // Integral
-  pid.integral += error * pid.dt;
-  double integralOutput = pid.ki * pid.integral;
+  pid->integral += error * pid->dt;
+  double integralOutput = pid->ki * pid->integral;
 
   // Derivative
-  double derivative = (error - pid.error) / pid.dt;
-  double derivativeOutput = pid.kd * derivative;
+  double derivative = (error - pid->error) / pid->dt;
+  double derivativeOutput = pid->kd * derivative;
 
   // Output
   double output = proportionalOutput + integralOutput + derivativeOutput;  
 
   // Limit to minimum and maximum
-  if(output > pid.maximum) {
-    output = pid.maximum;
-  } else if(output < pid.minimum) {
-    output = pid.minimum;
+  if(output > pid->maximum) {
+    output = pid->maximum;
+  } else if(output < pid->minimum) {
+    output = pid->minimum;
   }
 
   // Save error for derivative
-  pid.error = error;
+  pid->error = error;
 
   return output;
 }
 
-// Sense gyroscope task code
-void TaskSenseGyroscope(void *pvParameters) {
+// task code
+void TaskTurn90Degrees(void *pvParameters) {
   (void) pvParameters;
-  /*
-   * Periodic sensor task
-   * It will check the gyroscope position at a regular interval, and update a global variable with the position
-   */
-
    // Task setup here (like set a pin mode)
-    NavigationBegin();//initialize and start navigation
-    RestartTimer();  
+
+   // For the motor control: need to control one motor, but it's really one PID output
+   // Need to map to a range, each motor can be -255 to 255.
+   // Probably do a percentage for each.
+   // Or maybe have one wheel do a constant speed and the second do the PID stuff.
+   
    // Task loop here
    while(1) {
-    SimpleGyroNavigation(); 
-    //gyroDirection =  PresentHeading();
-    //Serial.println(gyroDirection);
+    if(isTurning90Degrees) {
+      PID pid;
+      pid.kp = 3.2;
+      pid.ki = 0;
+      pid.kd = 100;
+      pid.integral = 0;
+      pid.error = 0;
+      pid.dt = 250;
+      pid.minimum = -128;
+      pid.maximum = 128;
+      //SwitchSerialToMotors();
+      Motors(0,0);
+      NavigationBegin();
+      RestartTimer();
+      SimpleGyroNavigation(); 
+      int16_t startingHeading = GetDegrees();
+      int16_t setHeading = startingHeading - 30;
+      while(isTurning90Degrees) {
+        SimpleGyroNavigation(); 
+        int16_t currentHeading = GetDegrees();
+        double output = CalculatePID(setHeading, currentHeading, &pid);
+        //SwitchMotorsToSerial();
+        Serial.print("current heading=");
+        Serial.print(currentHeading);
+        Serial.print(", set heading=");
+        Serial.print(setHeading);
+        Serial.print(", control output=");
+        Serial.println(output);
+        //SwitchSerialToMotors();
+        Motors((int)output,-(int)output);
+  
+        vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms
+      }
+    }
+    vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms
+   }
+}
+
+// task code
+void TaskDriveStraight(void *pvParameters) {
+  (void) pvParameters;
+   // Task setup here (like set a pin mode)
+   
+   // Task loop here
+   while(1) {
+    if(isDrivingStraight) {
+      PID pid;
+      pid.kp = 50;
+      pid.ki = 0;
+      pid.kd = 0;
+      pid.integral = 0;
+      pid.error = 0;
+      pid.dt = 50;
+      pid.minimum = -100;
+      pid.maximum = 100;
+      //SwitchSerialToMotors();
+      //Motors(0,0);
+      NavigationBegin();
+      RestartTimer();
+      SimpleGyroNavigation(); 
+      int16_t startingHeading = GetDegrees();
+      int16_t setHeading = startingHeading;
+      while(isDrivingStraight) {
+        SimpleGyroNavigation(); 
+        int16_t currentHeading = GetDegrees();
+        double output = CalculatePID(setHeading, currentHeading, &pid);
+        //SwitchMotorsToSerial();
+        //Serial.print("current heading=");
+        //Serial.print(currentHeading);
+        //Serial.print(", set heading=");
+        //Serial.print(setHeading);
+        //Serial.print(", control output=");
+        //Serial.println(output);
+        //SwitchSerialToMotors();
+        if(currentHeading > 0) {
+          Motors(0,(int)abs(output));      
+          vTaskDelay(20 / portTICK_PERIOD_MS);    
+        } else if(currentHeading < 0) {
+          Motors((int)abs(output), 0); 
+          vTaskDelay(20 / portTICK_PERIOD_MS);
+        }
+        //Serial.println(output);
+        Motors(100, 100); 
+        
+  
+        vTaskDelay(30 / portTICK_PERIOD_MS); // Schedule to run every 250ms
+      }
+    }
+    vTaskDelay(50 / portTICK_PERIOD_MS); // Schedule to run every 250ms
+   }
+}
+
+// task code
+void TaskDriveSquare(void *pvParameters) {
+  (void) pvParameters;
+   // Task setup here (like set a pin mode)
+   
+   // Task loop here
+   while(1) {
     vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms
    }
 }
