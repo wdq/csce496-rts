@@ -25,7 +25,7 @@ void taskSetup() {
     (const portCHAR *)"Turn90Degrees", // task name string
     128, // stack size
     NULL, // nothing
-    2, // Priority, 0 is lowest
+    1, // Priority, 0 is lowest
     NULL); // nothing
     
   xTaskCreate(
@@ -33,7 +33,7 @@ void taskSetup() {
     (const portCHAR *)"DriveStraight", // task name string
     128, // stack size
     NULL, // nothing
-    3, // Priority, 0 is lowest
+    0, // Priority, 0 is lowest
     NULL); // nothing   
     
   xTaskCreate(
@@ -41,7 +41,7 @@ void taskSetup() {
     (const portCHAR *)"DriveSquare", // task name string
     128, // stack size
     NULL, // nothing
-    1, // Priority, 0 is lowest
+    2, // Priority, 0 is lowest
     NULL); // nothing              
 }
 
@@ -59,7 +59,7 @@ void setup(){
 void loop(){}
 
 bool isTurning90Degrees = false;
-bool isDrivingStraight = true;
+bool isDrivingStraight = false;
 
 // Struct to hold PID controller parameters.
 struct PID {
@@ -148,7 +148,16 @@ void TaskTurn90Degrees(void *pvParameters) {
         Serial.print(", control output=");
         Serial.println(output);
         //SwitchSerialToMotors();
+        if(output > 0) {
+          output = output + 10;
+        } else if(output < 0) {
+          output = output - 10;
+        }
         Motors((int)output,-(int)output);
+        if(abs(abs(setHeading) - abs(currentHeading)) < 1) {
+          isTurning90Degrees = false;
+          Motors(0,0);
+        }
   
         vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms
       }
@@ -218,7 +227,13 @@ void TaskDriveSquare(void *pvParameters) {
    
    // Task loop here
    while(1) {
-    vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms
+    isDrivingStraight = true;
+    vTaskDelay(1500 / portTICK_PERIOD_MS); // Schedule to run every 250ms
+    isDrivingStraight = false;
+    isTurning90Degrees = true;
+    while(isTurning90Degrees) {
+      vTaskDelay(250 / portTICK_PERIOD_MS);
+      }
    }
 }
 
