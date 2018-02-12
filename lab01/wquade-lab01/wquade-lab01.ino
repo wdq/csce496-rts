@@ -111,11 +111,6 @@ double CalculatePID(double setPoint, double processVariable, struct PID *pid) {
 void TaskTurn90Degrees(void *pvParameters) {
   (void) pvParameters;
    // Task setup here (like set a pin mode)
-
-   // For the motor control: need to control one motor, but it's really one PID output
-   // Need to map to a range, each motor can be -255 to 255.
-   // Probably do a percentage for each.
-   // Or maybe have one wheel do a constant speed and the second do the PID stuff.
    
    // Task loop here
    while(1) {
@@ -129,35 +124,24 @@ void TaskTurn90Degrees(void *pvParameters) {
       pid.kd = 100;
       pid.integral = 0;
       pid.error = 0;
-      pid.dt = 250;
-      pid.minimum = -128;
-      pid.maximum = 128;
-      //SwitchSerialToMotors();
+      pid.dt = 25;
+      pid.minimum = -90;
+      pid.maximum = 90;
       Motors(0,0);
-      NavigationBegin();
-      RestartTimer();
       SimpleGyroNavigation(); 
       int16_t startingHeading = GetDegrees();
-      int16_t setHeading = startingHeading - 30;
+      int16_t setHeading = startingHeading - 90;
       while(isTurning90Degrees) {
         SimpleGyroNavigation(); 
         int16_t currentHeading = GetDegrees();
         double output = CalculatePID(setHeading, currentHeading, &pid);
-        //SwitchMotorsToSerial();
-        //Serial.print("current heading=");
-        //Serial.print(currentHeading);
-        //Serial.print(", set heading=");
-        //Serial.print(setHeading);
-        //Serial.print(", control output=");
-        //Serial.println(output);
-        //SwitchSerialToMotors();
         if(output > 0) {
-          output = output + 10;
+          output = output + 12;
         } else if(output < 0) {
-          output = output - 10;
+          output = output - 12;
         }
         Motors((int)output,-(int)output);
-        if(abs(abs(setHeading) - abs(currentHeading)) < 1) {
+        if(abs(abs(setHeading) - abs(currentHeading)) == 0) {
           isTurning90Degrees = false;
           isDrivingStraight = true;
           Motors(0,0);
@@ -166,10 +150,10 @@ void TaskTurn90Degrees(void *pvParameters) {
           RefreshPixels();
         }
   
-        vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms
+        vTaskDelay(25 / portTICK_PERIOD_MS); // Schedule to run every 250ms
       }
     }
-    vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms
+    vTaskDelay(25 / portTICK_PERIOD_MS); // Schedule to run every 250ms
    }
 }
 
@@ -194,10 +178,7 @@ void TaskDriveStraight(void *pvParameters) {
       pid.dt = 50;
       pid.minimum = -100;
       pid.maximum = 100;
-      //SwitchSerialToMotors();
-      //Motors(0,0);
-      NavigationBegin();
-      RestartTimer();
+      Motors(0,0);
       SimpleGyroNavigation(); 
       int16_t startingHeading = GetDegrees();
       int16_t setHeading = startingHeading;
@@ -205,14 +186,6 @@ void TaskDriveStraight(void *pvParameters) {
         SimpleGyroNavigation(); 
         int16_t currentHeading = GetDegrees();
         double output = CalculatePID(setHeading, currentHeading, &pid);
-        //SwitchMotorsToSerial();
-        //Serial.print("current heading=");
-        //Serial.print(currentHeading);
-        //Serial.print(", set heading=");
-        //Serial.print(setHeading);
-        //Serial.print(", control output=");
-        //Serial.println(output);
-        //SwitchSerialToMotors();
         if(currentHeading > 0) {
           Motors(0,(int)abs(output));      
           vTaskDelay(20 / portTICK_PERIOD_MS);    
@@ -223,7 +196,7 @@ void TaskDriveStraight(void *pvParameters) {
         //Serial.println(output);
         Motors(100, 100); 
         straightLoopCounter++;
-        if(straightLoopCounter == 50) {
+        if(straightLoopCounter == 80) {
           straightLoopCounter = 0;
           isDrivingStraight = false;
           isTurning90Degrees = true;
@@ -249,6 +222,10 @@ void TaskDriveSquare(void *pvParameters) {
    // Task loop here
    while(1) {
     //isDrivingStraight = true;
+            //SimpleGyroNavigation(); 
+        //int16_t currentHeading = GetDegrees();
+        //Serial.println(currentHeading);
+    //vTaskDelay(100 / portTICK_PERIOD_MS); // Schedule to run every 250ms
     vTaskDelay(1500 / portTICK_PERIOD_MS); // Schedule to run every 250ms
    }
     /*isDrivingStraight = false;
