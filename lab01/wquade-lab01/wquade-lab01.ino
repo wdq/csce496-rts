@@ -60,6 +60,7 @@ void loop(){}
 
 bool isTurning90Degrees = false;
 bool isDrivingStraight = true;
+bool directionIsRight = true;
 
 // Struct to hold PID controller parameters.
 struct PID {
@@ -130,10 +131,24 @@ void TaskTurn90Degrees(void *pvParameters) {
       Motors(0,0);
       SimpleGyroNavigation(); 
       int16_t startingHeading = GetDegrees();
-      int16_t setHeading = startingHeading - 90;
+      int16_t setHeading = 0;
+      if(directionIsRight) {
+        setHeading = startingHeading + 90;
+      } else {
+        setHeading = startingHeading - 90;
+      }
       while(isTurning90Degrees) {
         SimpleGyroNavigation(); 
         int16_t currentHeading = GetDegrees();
+        if(abs(abs(setHeading) - abs(currentHeading)) == 0) {
+          Motors(0,0);
+          isTurning90Degrees = false;
+          isDrivingStraight = true;
+          SetPixelRGB( 4, 0, 0, 0);
+          SetPixelRGB( 5, 0, 0, 0);
+          RefreshPixels();
+          break;
+        }
         double output = CalculatePID(setHeading, currentHeading, &pid);
         if(output > 0) {
           output = output + 12;
@@ -141,14 +156,6 @@ void TaskTurn90Degrees(void *pvParameters) {
           output = output - 12;
         }
         Motors((int)output,-(int)output);
-        if(abs(abs(setHeading) - abs(currentHeading)) == 0) {
-          isTurning90Degrees = false;
-          isDrivingStraight = true;
-          Motors(0,0);
-          SetPixelRGB( 4, 0, 0, 0);
-          SetPixelRGB( 5, 0, 0, 0);
-          RefreshPixels();
-        }
   
         vTaskDelay(25 / portTICK_PERIOD_MS); // Schedule to run every 250ms
       }
