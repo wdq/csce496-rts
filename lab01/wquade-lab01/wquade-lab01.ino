@@ -144,12 +144,12 @@ void TaskTurn90Degrees(void *pvParameters) {
         int16_t currentHeading = GetDegrees();
         double output = CalculatePID(setHeading, currentHeading, &pid);
         //SwitchMotorsToSerial();
-        Serial.print("current heading=");
-        Serial.print(currentHeading);
-        Serial.print(", set heading=");
-        Serial.print(setHeading);
-        Serial.print(", control output=");
-        Serial.println(output);
+        //Serial.print("current heading=");
+        //Serial.print(currentHeading);
+        //Serial.print(", set heading=");
+        //Serial.print(setHeading);
+        //Serial.print(", control output=");
+        //Serial.println(output);
         //SwitchSerialToMotors();
         if(output > 0) {
           output = output + 10;
