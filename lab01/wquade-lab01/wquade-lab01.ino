@@ -25,7 +25,7 @@ void taskSetup() {
     (const portCHAR *)"Turn90Degrees", // task name string
     128, // stack size
     NULL, // nothing
-    1, // Priority, 0 is lowest
+    4, // Priority, 0 is lowest
     NULL); // nothing
     
   xTaskCreate(
@@ -33,7 +33,7 @@ void taskSetup() {
     (const portCHAR *)"DriveStraight", // task name string
     128, // stack size
     NULL, // nothing
-    0, // Priority, 0 is lowest
+    5, // Priority, 0 is lowest
     NULL); // nothing   
     
   xTaskCreate(
@@ -59,7 +59,7 @@ void setup(){
 void loop(){}
 
 bool isTurning90Degrees = false;
-bool isDrivingStraight = false;
+bool isDrivingStraight = true;
 
 // Struct to hold PID controller parameters.
 struct PID {
@@ -120,6 +120,9 @@ void TaskTurn90Degrees(void *pvParameters) {
    // Task loop here
    while(1) {
     if(isTurning90Degrees) {
+      SetPixelRGB( 4, 255, 0, 0);
+      SetPixelRGB( 5, 255, 0, 0);
+      RefreshPixels();
       PID pid;
       pid.kp = 3.2;
       pid.ki = 0;
@@ -156,7 +159,11 @@ void TaskTurn90Degrees(void *pvParameters) {
         Motors((int)output,-(int)output);
         if(abs(abs(setHeading) - abs(currentHeading)) < 1) {
           isTurning90Degrees = false;
+          isDrivingStraight = true;
           Motors(0,0);
+          SetPixelRGB( 4, 0, 0, 0);
+          SetPixelRGB( 5, 0, 0, 0);
+          RefreshPixels();
         }
   
         vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms
@@ -172,8 +179,12 @@ void TaskDriveStraight(void *pvParameters) {
    // Task setup here (like set a pin mode)
    
    // Task loop here
+   uint16_t straightLoopCounter = 0;
    while(1) {
     if(isDrivingStraight) {
+      SetPixelRGB( 4, 0, 0, 255);
+      SetPixelRGB( 5, 0, 0, 255);
+      RefreshPixels();
       PID pid;
       pid.kp = 50;
       pid.ki = 0;
@@ -211,6 +222,16 @@ void TaskDriveStraight(void *pvParameters) {
         }
         //Serial.println(output);
         Motors(100, 100); 
+        straightLoopCounter++;
+        if(straightLoopCounter == 50) {
+          straightLoopCounter = 0;
+          isDrivingStraight = false;
+          isTurning90Degrees = true;
+          Motors(0,0);
+          SetPixelRGB( 4, 0, 0, 0);
+          SetPixelRGB( 5, 0, 0, 0);
+          RefreshPixels();
+        }
         
   
         vTaskDelay(30 / portTICK_PERIOD_MS); // Schedule to run every 250ms
@@ -224,17 +245,18 @@ void TaskDriveStraight(void *pvParameters) {
 void TaskDriveSquare(void *pvParameters) {
   (void) pvParameters;
    // Task setup here (like set a pin mode)
-   
+   //isDrivingStraight = true;
    // Task loop here
    while(1) {
-    isDrivingStraight = true;
+    //isDrivingStraight = true;
     vTaskDelay(1500 / portTICK_PERIOD_MS); // Schedule to run every 250ms
-    isDrivingStraight = false;
+   }
+    /*isDrivingStraight = false;
     isTurning90Degrees = true;
     while(isTurning90Degrees) {
       vTaskDelay(250 / portTICK_PERIOD_MS);
       }
-   }
+   } */
 }
 
 
