@@ -180,6 +180,7 @@ void TaskDriveStraight(void *pvParameters) {
       pid.maximum = 100;
       Motors(0,0);
       SimpleGyroNavigation(); 
+      ZeroNavigation();
       int16_t startingHeading = GetDegrees();
       int16_t setHeading = startingHeading;
       while(isDrivingStraight) {
