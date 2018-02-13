@@ -1,6 +1,26 @@
 #include <Arduino_FreeRTOS.h>
 #include "RingoHardware.h"
 
+// Some global variables
+bool isTurning90Degrees = false;
+bool isDrivingStraight = true;
+bool directionIsRight = false;
+bool isFirstRun = true;
+int16_t globalStartingHeading = 0;
+uint8_t turnCount = 0;
+
+// Struct to hold PID controller parameters.
+struct PID {
+  double kp;          // Proportional gain
+  double ki;          // Integral gain
+  double kd;          // Derivative gain
+  double integral;    // Growing integral value
+  double error;       // Previous error value for derivative
+  double dt;          // Run/sampling interval time/rate
+  double minimum;     // Minimum allowed output
+  double maximum;     // Maximum allowed output
+};
+
 // Define tasks
 void TaskTurn90Degrees(void *pvParameters); // Turn 90 degrees
 void TaskDriveStraight(void *pvParameters); // Go straight
@@ -58,56 +78,6 @@ void setup(){
 // Don't do anything here since the tasks do the work
 void loop(){}
 
-bool isTurning90Degrees = false;
-bool isDrivingStraight = true;
-bool directionIsRight = true;
-
-// Struct to hold PID controller parameters.
-struct PID {
-  double kp;          // Proportional gain
-  double ki;          // Integral gain
-  double kd;          // Derivative gain
-  double integral;    // Growing integral value
-  double error;       // Previous error value for derivative
-  double dt;          // Run/sampling interval time/rate
-  double minimum;     // Minimum allowed output
-  double maximum;     // Maximum allowed output
-};
-
-// Function to calculate PID output given set point, current value (process variable), and PID controller parameters.
-// todo: look into extending this to support combinations of P, I, D control instead of only all three together.
-// Based on this: https://gist.github.com/bradley219/5373998
-double CalculatePID(double setPoint, double processVariable, struct PID *pid) {
-  // Error
-  double error = setPoint - processVariable;
-
-  // Proportional
-  double proportionalOutput = pid->kp * error;
-
-  // Integral
-  pid->integral += error * pid->dt;
-  double integralOutput = pid->ki * pid->integral;
-
-  // Derivative
-  double derivative = (error - pid->error) / pid->dt;
-  double derivativeOutput = pid->kd * derivative;
-
-  // Output
-  double output = proportionalOutput + integralOutput + derivativeOutput;  
-
-  // Limit to minimum and maximum
-  if(output > pid->maximum) {
-    output = pid->maximum;
-  } else if(output < pid->minimum) {
-    output = pid->minimum;
-  }
-
-  // Save error for derivative
-  pid->error = error;
-
-  return output;
-}
-
 // task code
 void TaskTurn90Degrees(void *pvParameters) {
   (void) pvParameters;
@@ -133,9 +103,9 @@ void TaskTurn90Degrees(void *pvParameters) {
       int16_t startingHeading = GetDegrees();
       int16_t setHeading = 0;
       if(directionIsRight) {
-        setHeading = startingHeading + 90;
+        setHeading = startingHeading + 88;
       } else {
-        setHeading = startingHeading - 90;
+        setHeading = startingHeading - 88;
       }
       while(isTurning90Degrees) {
         SimpleGyroNavigation(); 
@@ -147,6 +117,7 @@ void TaskTurn90Degrees(void *pvParameters) {
           SetPixelRGB( 4, 0, 0, 0);
           SetPixelRGB( 5, 0, 0, 0);
           RefreshPixels();
+          turnCount++;
           break;
         }
         double output = CalculatePID(setHeading, currentHeading, &pid);
@@ -168,7 +139,6 @@ void TaskTurn90Degrees(void *pvParameters) {
 void TaskDriveStraight(void *pvParameters) {
   (void) pvParameters;
    // Task setup here (like set a pin mode)
-   
    // Task loop here
    uint16_t straightLoopCounter = 0;
    while(1) {
@@ -190,6 +160,10 @@ void TaskDriveStraight(void *pvParameters) {
       ZeroNavigation();
       int16_t startingHeading = GetDegrees();
       int16_t setHeading = startingHeading;
+      if(isFirstRun) {
+       globalStartingHeading = startingHeading;
+       isFirstRun = false;
+      }      
       while(isDrivingStraight) {
         SimpleGyroNavigation(); 
         int16_t currentHeading = GetDegrees();
@@ -230,7 +204,7 @@ void TaskDriveSquare(void *pvParameters) {
    // Task loop here
    while(1) {
     //isDrivingStraight = true;
-            //SimpleGyroNavigation(); 
+        //SimpleGyroNavigation(); 
         //int16_t currentHeading = GetDegrees();
         //Serial.println(currentHeading);
     //vTaskDelay(100 / portTICK_PERIOD_MS); // Schedule to run every 250ms
