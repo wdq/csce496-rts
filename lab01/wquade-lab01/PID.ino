@@ -1,5 +1,6 @@
+// I broke the PID controller function into another file since the main file was getting a little big.
+
 // Function to calculate PID output given set point, current value (process variable), and PID controller parameters.
-// todo: look into extending this to support combinations of P, I, D control instead of only all three together.
 // Based on this: https://gist.github.com/bradley219/5373998
 double CalculatePID(double setPoint, double processVariable, struct PID *pid) {
   // Error
