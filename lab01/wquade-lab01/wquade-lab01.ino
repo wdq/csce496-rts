@@ -4,8 +4,8 @@
 #define TURN_ANGLE    88 // 87 sometimes seems to work better, other times 88
 
 // Some global variables
-bool isTurning90Degrees = false; // These first two are used to keep track of if we're going straight or turning, defaults to straight.
-bool isDrivingStraight = true;
+bool isTurning = false; // These first two are used to keep track of if we're going straight or turning, defaults to straight.
+bool isDrivingStraight = false;
 bool directionIsRight = false; // This is used to switch between making right turns, and making left turns.
 uint8_t turnCount = 0; // Keep track of the turn number to get angle to set
 
@@ -21,10 +21,21 @@ struct PID {
   double maximum;     // Maximum allowed output
 };
 
+typedef struct {
+  int16_t angle; // degrees of desired heading
+  int distance; // desired distance in centimeters
+} directionData;
+
+int16_t directionDataAngle;
+int directionDataDistance;
+directionData directions[20];
+
+
+
 // Define tasks
-void TaskTurn90Degrees(void *pvParameters); // Turn 90 degrees
+void TaskTurn(void *pvParameters); // Turn
 void TaskDriveStraight(void *pvParameters); // Go straight
-void TaskBackground(void *pvParameters);   // Background task, I used this for testing
+void TaskControl(void *pvParameters);   // Control the robot by triggering the other tasks.
 
 // Setup ringo stuff
 void ringoSetup() {
@@ -41,11 +52,11 @@ void ringoSetup() {
 void taskSetup() {
   // Create tasks        
   xTaskCreate(
-    TaskTurn90Degrees, // task function
-    (const portCHAR *)"Turn90Degrees", // task name string
+    TaskTurn, // task function
+    (const portCHAR *)"Turn", // task name string
     128, // stack size
     NULL, // nothing
-    1, // Priority, 0 is lowest
+    0, // Priority, 0 is lowest
     NULL); // nothing
     
   xTaskCreate(
@@ -53,26 +64,45 @@ void taskSetup() {
     (const portCHAR *)"DriveStraight", // task name string
     128, // stack size
     NULL, // nothing
-    2, // Priority, 0 is lowest
+    1, // Priority, 0 is lowest
     NULL); // nothing   
     
   xTaskCreate(
-    TaskBackground, // task function
-    (const portCHAR *)"BackgroundTask", // task name string
+    TaskControl, // task function
+    (const portCHAR *)"Control", // task name string
     128, // stack size
     NULL, // nothing
-    0, // Priority, 0 is lowest
+    2, // Priority, 0 is lowest
     NULL); // nothing              
 }
 
 
 // First run code
 void setup(){
+  // Equilateral triangle
+  directions[0] = (directionData){.angle=0, .distance=10}; // straight 10cm
+  directions[1] = (directionData){.angle=60, .distance=0}; // turn 60 degrees
+  directions[2] = (directionData){.angle=0, .distance=10}; // straight 10cm
+  directions[3] = (directionData){.angle=60, .distance=0}; // turn 60 degrees
+  directions[4] = (directionData){.angle=0, .distance=10}; // straight 10cm
+  directions[5] = (directionData){.angle=0, .distance=0}; // stop
+
+  // Square
+ /* directions[0] = (directionData){.angle=0, .distance=10}; // straight 10cm
+  directions[1] = (directionData){.angle=90, .distance=0}; // turn 90 degrees
+  directions[2] = (directionData){.angle=0, .distance=10}; // straight 10cm
+  directions[3] = (directionData){.angle=90, .distance=0}; // turn 90 degrees
+  directions[4] = (directionData){.angle=0, .distance=10}; // straight 10cm
+  directions[5] = (directionData){.angle=90, .distance=0}; // turn 90 degrees
+  directions[6] = (directionData){.angle=0, .distance=10}; // straight 10cm  
+  directions[7] = (directionData){.angle=90, .distance=0}; // turn 90 degrees  
+  directions[8] = (directionData){.angle=0, .distance=0}; // stop*/
+  
   delay(2000); // Delay so that my hand can move away before gyro calibrates
   ringoSetup(); // Setup ringo stuff
   taskSetup(); // Setup the tasks
   Serial.begin(9600); // For debugging
-  Serial.println("Setup");
+  Serial.println("Setup");  
 
 }
 
@@ -80,12 +110,12 @@ void setup(){
 void loop(){}
 
 // task code
-void TaskTurn90Degrees(void *pvParameters) {
+void TaskTurn(void *pvParameters) {
   (void) pvParameters;
    // Task setup here (like set a pin mode)
    // Task loop here
    while(1) { /* begin task loop */
-    if(isTurning90Degrees) { /* begin if turning 90 degrees */
+    if(isTurning) { /* begin if turning 90 degrees */
       SetPixelRGB( 4, 255, 0, 0); // Set the lights to red
       SetPixelRGB( 5, 255, 0, 0);
       RefreshPixels();
@@ -107,12 +137,12 @@ void TaskTurn90Degrees(void *pvParameters) {
       } else {
         setHeading = turnCount * -TURN_ANGLE;
       }
-      while(isTurning90Degrees) { /* begin turning 90 degrees loop */
+      while(isTurning) { /* begin turning 90 degrees loop */
         SimpleGyroNavigation(); // Pull sensors
         int16_t currentHeading = GetDegrees();
         if(abs(abs(setHeading) - abs(currentHeading)) == 0) { // If we have reached set point, stop.
           Motors(0,0);
-          isTurning90Degrees = false; // Change modes
+          isTurning = false; // Change modes
           isDrivingStraight = true;
           SetPixelRGB( 4, 0, 0, 0);
           SetPixelRGB( 5, 0, 0, 0);
@@ -187,7 +217,7 @@ void TaskDriveStraight(void *pvParameters) {
         if(straightLoopCounter == 80) {
           straightLoopCounter = 0;
           isDrivingStraight = false; // Change modes
-          isTurning90Degrees = true;
+          isTurning = true;
           Motors(0,0);
           SetPixelRGB( 4, 0, 0, 0);
           SetPixelRGB( 5, 0, 0, 0);
@@ -203,18 +233,45 @@ void TaskDriveStraight(void *pvParameters) {
 }
 
 // task code
-// This task is simply to test things out
-// For example I can set straight driving and 90 degree turn driving to false, and then this runs so I can print out the gyro value over the serial port for testing.
-void TaskBackground(void *pvParameters) {
+void TaskControl(void *pvParameters) {
   (void) pvParameters;
    // Task setup here (like set a pin mode)
    // Task loop here
+   int directionIndex = 0;
    while(1) { /* begin task loop */
     //SimpleGyroNavigation(); 
     //int16_t currentHeading = GetDegrees();
     //Serial.println(currentHeading);
     //vTaskDelay(100 / portTICK_PERIOD_MS); // Schedule to run every 100ms
-    vTaskDelay(1500 / portTICK_PERIOD_MS); // Schedule to run every 1.5s
+
+    while(isDrivingStraight || isTurning) { // Wait for the straight or turn task to do its thing
+      vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms      
+    }
+
+    // Get the next direction
+    directionDataAngle = directions[directionIndex].angle;
+    directionDataDistance = directions[directionIndex].distance;
+    if(directionDataAngle == 0 && directionDataDistance == 0) { // stop condition
+      while(1) {
+        // just wait, since the task is done
+        vTaskDelay(250 / portTICK_PERIOD_MS);
+      }
+    }
+    directionIndex++;
+
+    // Update booleans to get the tasks to run.
+    if(directionDataDistance == 0) { // no distance, so must be a turn
+      isTurning = true;
+      isDrivingStraight = false;
+    } else if(directionDataAngle == 0) { // no angle, so must be straight
+      isTurning = false;
+      isDrivingStraight = true;      
+    }
+
+    // Enable the correct thing
+
+    
+    vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms, may need to lower this if there is a noticable pause in between switching the other tasks
    }
 }
 
