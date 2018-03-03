@@ -80,23 +80,27 @@ void taskSetup() {
 // First run code
 void setup(){
   // Equilateral triangle
-  directions[0] = (directionData){.angle=0, .distance=10}; // straight 10cm
+  /*
+  directions[0] = (directionData){.angle=0, .distance=40}; // straight 40
   directions[1] = (directionData){.angle=60, .distance=0}; // turn 60 degrees
-  directions[2] = (directionData){.angle=0, .distance=10}; // straight 10cm
+  directions[2] = (directionData){.angle=0, .distance=40}; // straight 40
   directions[3] = (directionData){.angle=60, .distance=0}; // turn 60 degrees
-  directions[4] = (directionData){.angle=0, .distance=10}; // straight 10cm
+  directions[4] = (directionData){.angle=0, .distance=40}; // straight 40
   directions[5] = (directionData){.angle=0, .distance=0}; // stop
+  */
 
   // Square
- /* directions[0] = (directionData){.angle=0, .distance=10}; // straight 10cm
+  
+  directions[0] = (directionData){.angle=0, .distance=80}; // straight 80
   directions[1] = (directionData){.angle=90, .distance=0}; // turn 90 degrees
-  directions[2] = (directionData){.angle=0, .distance=10}; // straight 10cm
+  directions[2] = (directionData){.angle=0, .distance=80}; // straight 80
   directions[3] = (directionData){.angle=90, .distance=0}; // turn 90 degrees
-  directions[4] = (directionData){.angle=0, .distance=10}; // straight 10cm
+  directions[4] = (directionData){.angle=0, .distance=80}; // straight 80
   directions[5] = (directionData){.angle=90, .distance=0}; // turn 90 degrees
-  directions[6] = (directionData){.angle=0, .distance=10}; // straight 10cm  
+  directions[6] = (directionData){.angle=0, .distance=80}; // straight 90  
   directions[7] = (directionData){.angle=90, .distance=0}; // turn 90 degrees  
-  directions[8] = (directionData){.angle=0, .distance=0}; // stop*/
+  directions[8] = (directionData){.angle=0, .distance=0}; // stop
+  
   
   delay(2000); // Delay so that my hand can move away before gyro calibrates
   ringoSetup(); // Setup ringo stuff
@@ -119,31 +123,17 @@ void TaskTurn(void *pvParameters) {
       SetPixelRGB( 4, 255, 0, 0); // Set the lights to red
       SetPixelRGB( 5, 255, 0, 0);
       RefreshPixels();
-      PID pid; // setup the PID controller
-      pid.kp = 3.2;
-      pid.ki = 0;
-      pid.kd = 100;
-      pid.integral = 0;
-      pid.error = 0;
-      pid.dt = 25;
-      pid.minimum = -90;
-      pid.maximum = 90;
+      PID pid = (PID){.kp=3.2, .ki=0, .kd=100, .integral=0, .error=0, .dt=25, .minimum=-90, .maximum=90}; // setup the PID controller
       Motors(0,0); // Make sure the motors have stopped before doing anything (todo: maybe a small delay?)
+      ZeroNavigation();
       SimpleGyroNavigation(); // Pull sensors
-      turnCount++;
-      int16_t setHeading = 0; // Handle turning right or left, base the angle on the number of turns since the gyro just increments
-      if(directionIsRight) {
-        setHeading = turnCount * TURN_ANGLE;
-      } else {
-        setHeading = turnCount * -TURN_ANGLE;
-      }
+      int16_t setHeading = directionDataAngle;
       while(isTurning) { /* begin turning 90 degrees loop */
         SimpleGyroNavigation(); // Pull sensors
         int16_t currentHeading = GetDegrees();
         if(abs(abs(setHeading) - abs(currentHeading)) == 0) { // If we have reached set point, stop.
           Motors(0,0);
           isTurning = false; // Change modes
-          isDrivingStraight = true;
           SetPixelRGB( 4, 0, 0, 0);
           SetPixelRGB( 5, 0, 0, 0);
           RefreshPixels();
@@ -176,24 +166,12 @@ void TaskDriveStraight(void *pvParameters) {
       SetPixelRGB( 4, 0, 0, 255); // set the lights to green
       SetPixelRGB( 5, 0, 0, 255);
       RefreshPixels();
-      PID pid; // setup the PID controller
-      pid.kp = 50;
-      pid.ki = 0;
-      pid.kd = 0;
-      pid.integral = 0;
-      pid.error = 0;
-      pid.dt = 50;
-      pid.minimum = -100;
-      pid.maximum = 100;
+      PID pid = (PID){.kp=50, .ki=0, .kd=0, .integral=0, .error=0, .dt=50, .minimum=-100, .maximum=100}; // setup the PID controller      
       Motors(0,0); // Make sure the motors have stopped before doing anything (todo: maybe a small delay?)
+      ZeroNavigation();
       SimpleGyroNavigation(); // Pull sensors
       int16_t startingHeading = GetDegrees();
-      int16_t setHeading = 0; // Base the set heading on the number of turns that have happened, since the gryo just increments
-      if(directionIsRight) {
-        setHeading = turnCount * TURN_ANGLE;
-      } else {
-        setHeading = turnCount * -TURN_ANGLE;
-      }  
+      int16_t setHeading = directionDataAngle;
       while(isDrivingStraight) { /* begin driving straight loop */
         SimpleGyroNavigation();  // Pull sensors
         int16_t currentHeading = GetDegrees();
@@ -214,10 +192,9 @@ void TaskDriveStraight(void *pvParameters) {
         // Originally I did a fixed run time before changing modes (in a third task), but had some issues with inconsistency from it sometimes being
         // stopped when it was turning right or left to correct the straight line driving, this guarantees that it always stops at the same spot, 
         // and doesn't require that I disable interrupts or anything. 
-        if(straightLoopCounter == 80) {
+        if(straightLoopCounter == directionDataDistance) {
           straightLoopCounter = 0;
           isDrivingStraight = false; // Change modes
-          isTurning = true;
           Motors(0,0);
           SetPixelRGB( 4, 0, 0, 0);
           SetPixelRGB( 5, 0, 0, 0);
