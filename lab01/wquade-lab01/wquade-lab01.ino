@@ -6,29 +6,32 @@
 // Some global variables
 bool isTurning = false; // These first two are used to keep track of if we're going straight or turning, defaults to straight.
 bool isDrivingStraight = false;
-bool directionIsRight = false; // This is used to switch between making right turns, and making left turns.
-uint8_t turnCount = 0; // Keep track of the turn number to get angle to set
+
+bool isAvoidingObstacle = false; // Follow the avoidance code if this is true.
+bool isObstacle = false; // Keep track of if there is an obstacle in the way
+uint16_t globalLightSensorAvg = 0; // Keep track of the average light sensor value
+uint16_t globalLightSensorAvgCount = 0; // If there is less light than the average there is probably an obstacle in the way.
 
 // Struct to hold PID controller parameters.
 struct PID {
-  double kp;          // Proportional gain
-  double ki;          // Integral gain
-  double kd;          // Derivative gain
-  double integral;    // Growing integral value
-  double error;       // Previous error value for derivative
-  double dt;          // Run/sampling interval time/rate
-  double minimum;     // Minimum allowed output
-  double maximum;     // Maximum allowed output
+  int8_t kp;          // Proportional gain
+  int8_t ki;          // Integral gain
+  int8_t kd;          // Derivative gain
+  int8_t integral;    // Growing integral value
+  int8_t error;       // Previous error value for derivative
+  int8_t dt;          // Run/sampling interval time/rate
+  int8_t minimum;     // Minimum allowed output
+  int8_t maximum;     // Maximum allowed output
 };
 
 typedef struct {
   int16_t angle; // degrees of desired heading
-  int distance; // desired distance in centimeters
+  uint8_t distance; // desired distance in centimeters
 } directionData;
 
 int16_t directionDataAngle;
-int directionDataDistance;
-directionData directions[20];
+uint8_t directionDataDistance;
+directionData directions[5];
 
 
 
@@ -36,6 +39,25 @@ directionData directions[20];
 void TaskTurn(void *pvParameters); // Turn
 void TaskDriveStraight(void *pvParameters); // Go straight
 void TaskControl(void *pvParameters);   // Control the robot by triggering the other tasks.
+void TaskCheckForObstacle(void *pvParameters); // Check for obstacles
+
+// Check for obstacle with light sensors, return true if obstacle, otherwise false.
+bool checkForObstacle(bool firstRun) {
+  SetPixelRGB( 4, 0, 0, 0); // Turn off lights
+  SetPixelRGB( 5, 0, 0, 0);
+  RefreshPixels();  
+  digitalWrite(Source_Select, HIGH); // Make sure we're using the sensors on top
+  uint16_t sensorLeft = analogRead(LightSense_Left); // Get the sensor values and average them
+  uint16_t sensorRight = analogRead(LightSense_Right); // todo: Maybe do an average analog read instead
+  uint16_t sensorAvg = (sensorLeft + sensorRight) / 2;
+
+  if((sensorAvg >= (globalLightSensorAvg - 75)) || firstRun) { // Must not be an obstacle
+    globalLightSensorAvgCount++;
+    globalLightSensorAvg = globalLightSensorAvg + (float)(((float)sensorAvg - (float)globalLightSensorAvg) / (float)globalLightSensorAvgCount);
+    return false; // No obstacle
+  }
+  return true; // Obstacle
+}
 
 // Setup ringo stuff
 void ringoSetup() {
@@ -50,64 +72,62 @@ void ringoSetup() {
 
 // Setup the tasks
 void taskSetup() {
-  // Create tasks        
+  // Create tasks   
+       
   xTaskCreate(
     TaskTurn, // task function
     (const portCHAR *)"Turn", // task name string
-    128, // stack size
+    75, // stack size
     NULL, // nothing
-    0, // Priority, 0 is lowest
+    1, // Priority, 0 is lowest
     NULL); // nothing
+    
+    
     
   xTaskCreate(
     TaskDriveStraight, // task function
     (const portCHAR *)"DriveStraight", // task name string
-    128, // stack size
+    75, // stack size
     NULL, // nothing
-    1, // Priority, 0 is lowest
+    2, // Priority, 0 is lowest
     NULL); // nothing   
     
   xTaskCreate(
     TaskControl, // task function
     (const portCHAR *)"Control", // task name string
-    128, // stack size
+    120, // stack size
     NULL, // nothing
-    2, // Priority, 0 is lowest
-    NULL); // nothing              
+    3, // Priority, 0 is lowest
+    NULL); // nothing    
+    
+  xTaskCreate(
+    TaskCheckForObstacle, // task function
+    (const portCHAR *)"CheckForObstacle", // task name string
+    55, // stack size
+    NULL, // nothing
+    0, // Priority, 0 is lowest
+    NULL); // nothing                 
 }
 
-
 // First run code
-void setup(){
-  // Equilateral triangle
-  /*
-  directions[0] = (directionData){.angle=0, .distance=40}; // straight 40
-  directions[1] = (directionData){.angle=60, .distance=0}; // turn 60 degrees
-  directions[2] = (directionData){.angle=0, .distance=40}; // straight 40
-  directions[3] = (directionData){.angle=60, .distance=0}; // turn 60 degrees
-  directions[4] = (directionData){.angle=0, .distance=40}; // straight 40
-  directions[5] = (directionData){.angle=0, .distance=0}; // stop
-  */
-
-  // Square
-  
-  directions[0] = (directionData){.angle=0, .distance=80}; // straight 80
-  directions[1] = (directionData){.angle=90, .distance=0}; // turn 90 degrees
-  directions[2] = (directionData){.angle=0, .distance=80}; // straight 80
-  directions[3] = (directionData){.angle=90, .distance=0}; // turn 90 degrees
-  directions[4] = (directionData){.angle=0, .distance=80}; // straight 80
-  directions[5] = (directionData){.angle=90, .distance=0}; // turn 90 degrees
-  directions[6] = (directionData){.angle=0, .distance=80}; // straight 90  
-  directions[7] = (directionData){.angle=90, .distance=0}; // turn 90 degrees  
-  directions[8] = (directionData){.angle=0, .distance=0}; // stop
-  
-  
+void setup(){  
   delay(2000); // Delay so that my hand can move away before gyro calibrates
   ringoSetup(); // Setup ringo stuff
-  taskSetup(); // Setup the tasks
   Serial.begin(9600); // For debugging
   Serial.println("Setup");  
 
+  // Collect some data on the light sensors for a little bit before moving.
+  // That way there is a good baseline of what the sensors are when there is no obstacle.
+  // This assumes that the robot starts in a position where there isn't an obstacle.
+  int8_t lightSensorInitCountDown = 20; // 5 seconds (250ms chunks)
+  while(lightSensorInitCountDown > 0) {
+    Serial.println("Check");
+    checkForObstacle(true);
+    lightSensorInitCountDown--;
+    delay(250);        
+  }
+    Serial.println("Starting tasks");
+    taskSetup(); // Setup the tasks
 }
 
 // Don't do anything here since the tasks do the work
@@ -123,7 +143,7 @@ void TaskTurn(void *pvParameters) {
       SetPixelRGB( 4, 255, 0, 0); // Set the lights to red
       SetPixelRGB( 5, 255, 0, 0);
       RefreshPixels();
-      PID pid = (PID){.kp=3.2, .ki=0, .kd=100, .integral=0, .error=0, .dt=25, .minimum=-90, .maximum=90}; // setup the PID controller
+      PID pid = (PID){.kp=3, .ki=0, .kd=100, .integral=0, .error=0, .dt=25, .minimum=-90, .maximum=90}; // setup the PID controller
       Motors(0,0); // Make sure the motors have stopped before doing anything (todo: maybe a small delay?)
       ZeroNavigation();
       SimpleGyroNavigation(); // Pull sensors
@@ -139,7 +159,7 @@ void TaskTurn(void *pvParameters) {
           RefreshPixels();
           break; // Leave
         }
-        double output = CalculatePID(setHeading, currentHeading, &pid); // Calculate the PID control value
+        int16_t output = CalculatePID(setHeading, currentHeading, &pid); // Calculate the PID control value
         // I added a 12 offset to the PID output value, otherwise finishing the turn wouldn't happen since the motors would run at a speed that's too slow to turn.
         if(output > 0) { // Need to move right
           output = output + 12;
@@ -151,7 +171,7 @@ void TaskTurn(void *pvParameters) {
         vTaskDelay(25 / portTICK_PERIOD_MS); // Drive the motors at the control value for 25ms, before running the control loop again
       } /* end turning 90 degrees loop */
     } /* end if turning 90 degrees */
-    vTaskDelay(25 / portTICK_PERIOD_MS); // Schedule to run every 25ms (this runs when the task is idle, not turning)
+    vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms (this runs when the task is idle, not turning)
    } /* end task loop */
 }
 
@@ -160,7 +180,7 @@ void TaskDriveStraight(void *pvParameters) {
   (void) pvParameters;
    // Task setup here (like set a pin mode)
    // Task loop here
-   uint16_t straightLoopCounter = 0;
+   uint8_t straightLoopCounter = 0;
    while(1) { /* begin task loop */
     if(isDrivingStraight) { /* begin if driving straight */
       SetPixelRGB( 4, 0, 0, 255); // set the lights to green
@@ -170,12 +190,11 @@ void TaskDriveStraight(void *pvParameters) {
       Motors(0,0); // Make sure the motors have stopped before doing anything (todo: maybe a small delay?)
       ZeroNavigation();
       SimpleGyroNavigation(); // Pull sensors
-      int16_t startingHeading = GetDegrees();
       int16_t setHeading = directionDataAngle;
       while(isDrivingStraight) { /* begin driving straight loop */
         SimpleGyroNavigation();  // Pull sensors
         int16_t currentHeading = GetDegrees();
-        double output = CalculatePID(setHeading, currentHeading, &pid); // Get control output
+        int16_t output = CalculatePID(setHeading, currentHeading, &pid); // Get control output
         int16_t headingDiff = currentHeading - setHeading; // Figure out if we need to move left or right, and control motors based on that
         // Runs the motors for 20ms at the control output value to drive towards the set point.
         if(headingDiff > 0) { // Left
@@ -192,20 +211,21 @@ void TaskDriveStraight(void *pvParameters) {
         // Originally I did a fixed run time before changing modes (in a third task), but had some issues with inconsistency from it sometimes being
         // stopped when it was turning right or left to correct the straight line driving, this guarantees that it always stops at the same spot, 
         // and doesn't require that I disable interrupts or anything. 
+        SetPixelRGB( 4, 0, straightLoopCounter, 0);
         if(straightLoopCounter == directionDataDistance) {
           straightLoopCounter = 0;
-          isDrivingStraight = false; // Change modes
           Motors(0,0);
           SetPixelRGB( 4, 0, 0, 0);
           SetPixelRGB( 5, 0, 0, 0);
           RefreshPixels();
+          isDrivingStraight = false; // Change modes
         }
         
   
         vTaskDelay(30 / portTICK_PERIOD_MS); // Drive the motors straight for 30ms
       } /* end driving straight loop */
     } /* end if driving straight */
-    vTaskDelay(50 / portTICK_PERIOD_MS); // Schedule to run every 50ms (this runs when the task is idle, not going straight)
+    vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms (this runs when the task is idle, not going straight)
    } /* end task loop */
 }
 
@@ -225,30 +245,60 @@ void TaskControl(void *pvParameters) {
       vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms      
     }
 
-    // Get the next direction
-    directionDataAngle = directions[directionIndex].angle;
-    directionDataDistance = directions[directionIndex].distance;
-    if(directionDataAngle == 0 && directionDataDistance == 0) { // stop condition
-      while(1) {
-        // just wait, since the task is done
-        vTaskDelay(250 / portTICK_PERIOD_MS);
-      }
+    if(!isObstacle && !isAvoidingObstacle) { // If no obstacle, go straight (to reach goal)
+      //Serial.println("Straight");
+      directionDataAngle = 0;
+      directionDataDistance = 25;
+    } else if(!isAvoidingObstacle) { // Try to go around obstacle.
+      //Serial.println("Setup avoidance");
+      directions[0] = (directionData){.angle=90, .distance=0}; // turn 90 degrees
+      directions[1] = (directionData){.angle=0, .distance=25}; // straight 25
+      directions[1] = (directionData){.angle=-90, .distance=0}; // turn -90
+      directions[2] = (directionData){.angle=0, .distance=0}; // stop      
+      directionIndex = 0;
+      isAvoidingObstacle = true;
     }
-    directionIndex++;
+
+    if(isAvoidingObstacle) {
+      //Serial.println("Avoiding");
+      // Get the next direction
+      directionDataAngle = directions[directionIndex].angle;
+      directionDataDistance = directions[directionIndex].distance;
+      if(directionDataAngle == 0 && directionDataDistance == 0) { // stop condition
+        isAvoidingObstacle = false;
+      }
+      directionIndex++;
+    }
+
+
 
     // Update booleans to get the tasks to run.
-    if(directionDataDistance == 0) { // no distance, so must be a turn
+    if(directionDataDistance == 0 && directionDataAngle != 0) { // no distance, so must be a turn
       isTurning = true;
       isDrivingStraight = false;
-    } else if(directionDataAngle == 0) { // no angle, so must be straight
+    } else if(directionDataAngle == 0 && directionDataDistance != 0) { // no angle, so must be straight
       isTurning = false;
       isDrivingStraight = true;      
+    } else if(directionDataDistance == 0 && directionDataAngle == 0) { // Do nothing
+      isTurning = false;
+      isDrivingStraight = false;
     }
 
     // Enable the correct thing
 
     
     vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms, may need to lower this if there is a noticable pause in between switching the other tasks
+   }
+}
+
+// task code
+void TaskCheckForObstacle(void *pvParameters) {
+  (void) pvParameters;
+   // Task setup here (like set a pin mode)
+   // Task loop here
+   while(1) { /* begin task loop */
+    isObstacle = checkForObstacle(false); // Update global variable
+    vTaskDelay(100 / portTICK_PERIOD_MS); // Schedule to run every 100ms
    }
 }
 
