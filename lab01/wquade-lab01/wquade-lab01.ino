@@ -2,6 +2,7 @@
 #include "RingoHardware.h"
 
 #define TURN_ANGLE    88 // 87 sometimes seems to work better, other times 88
+#define CYCLES_SINCE_CORRECTION_THRESHOLD  3
 
 // Some global variables
 bool isTurning = false; // These first two are used to keep track of if we're going straight or turning, defaults to straight.
@@ -9,10 +10,9 @@ bool isDrivingStraight = false;
 
 bool isAvoidingObstacle = false; // Follow the avoidance code if this is true.
 bool isObstacle = false; // Keep track of if there is an obstacle in the way
-uint16_t globalLightSensorAvg = 0; // Keep track of the average light sensor value
-uint16_t globalLightSensorAvgCount = 0; // If there is less light than the average there is probably an obstacle in the way.
-int8_t leftMotorValue = 0;
-int8_t rightMotorValue = 0;
+uint8_t cyclesSinceCorrectionLeft = 0;
+uint8_t cyclesSinceCorrectionRight = 0;
+uint8_t cyclesSinceCorrectionStraight = 0;
 
 // Struct to hold PID controller parameters.
 struct PID {
@@ -44,22 +44,20 @@ void TaskDriveStraight(void *pvParameters); // Go straight
 void TaskControl(void *pvParameters);   // Control the robot by triggering the other tasks.
 void TaskCheckForObstacle(void *pvParameters); // Check for obstacles
 
-// Check for obstacle with light sensors, return true if obstacle, otherwise false.
-bool checkForObstacle(bool firstRun) {
-  SetPixelRGB( 4, 0, 0, 0); // Turn off lights
-  SetPixelRGB( 5, 0, 0, 0);
-  RefreshPixels();  
-  digitalWrite(Source_Select, HIGH); // Make sure we're using the sensors on top
-  uint16_t sensorLeft = analogRead(LightSense_Left); // Get the sensor values and average them
-  uint16_t sensorRight = analogRead(LightSense_Right); // todo: Maybe do an average analog read instead
-  uint16_t sensorAvg = (sensorLeft + sensorRight) / 2;
-
-  if((sensorAvg >= (globalLightSensorAvg - 75)) || firstRun) { // Must not be an obstacle
-    globalLightSensorAvgCount++;
-    globalLightSensorAvg = globalLightSensorAvg + (float)(((float)sensorAvg - (float)globalLightSensorAvg) / (float)globalLightSensorAvgCount);
-    return false; // No obstacle
+// Check for obstacle based on PID controller corrections not moving, return true if obstacle, otherwise false.
+bool checkForObstacle() {
+  if(isAvoidingObstacle) {
+    return false; // Already handling it, so no obstacle.
   }
-  return true; // Obstacle
+  if(cyclesSinceCorrectionStraight >= CYCLES_SINCE_CORRECTION_THRESHOLD || 
+        cyclesSinceCorrectionLeft >= CYCLES_SINCE_CORRECTION_THRESHOLD ||
+        cyclesSinceCorrectionRight >= CYCLES_SINCE_CORRECTION_THRESHOLD) {
+    cyclesSinceCorrectionStraight = 0;
+    cyclesSinceCorrectionLeft = 0;
+    cyclesSinceCorrectionRight = 0;
+    return true; // Obstacle    
+  }
+  return false; // No obstacle
 }
 
 // Setup ringo stuff
@@ -85,12 +83,10 @@ void taskSetup() {
     1, // Priority, 0 is lowest
     NULL); // nothing
     
-    
-    
   xTaskCreate(
     TaskDriveStraight, // task function
     (const portCHAR *)"DriveStraight", // task name string
-    75, // stack size
+    85, // stack size
     NULL, // nothing
     2, // Priority, 0 is lowest
     NULL); // nothing   
@@ -98,7 +94,7 @@ void taskSetup() {
   xTaskCreate(
     TaskControl, // task function
     (const portCHAR *)"Control", // task name string
-    120, // stack size
+    130, // stack size
     NULL, // nothing
     3, // Priority, 0 is lowest
     NULL); // nothing    
@@ -106,7 +102,7 @@ void taskSetup() {
   xTaskCreate(
     TaskCheckForObstacle, // task function
     (const portCHAR *)"CheckForObstacle", // task name string
-    55, // stack size
+    50, // stack size
     NULL, // nothing
     0, // Priority, 0 is lowest
     NULL); // nothing                 
@@ -118,17 +114,6 @@ void setup(){
   ringoSetup(); // Setup ringo stuff
   Serial.begin(9600); // For debugging
   Serial.println("Setup");  
-
-  // Collect some data on the light sensors for a little bit before moving.
-  // That way there is a good baseline of what the sensors are when there is no obstacle.
-  // This assumes that the robot starts in a position where there isn't an obstacle.
-  int8_t lightSensorInitCountDown = 20; // 5 seconds (250ms chunks)
-  while(lightSensorInitCountDown > 0) {
-    Serial.println("Check");
-    checkForObstacle(true);
-    lightSensorInitCountDown--;
-    delay(250);        
-  }
     Serial.println("Starting tasks");
     taskSetup(); // Setup the tasks
 }
@@ -169,9 +154,7 @@ void TaskTurn(void *pvParameters) {
         } else if(output < 0) { // Need to move left
           output = output - 12;
         }
-        leftMotorValue = (int)output;
-        rightMotorValue = -(int)output;
-        Motors(leftMotorValue,rightMotorValue); // Drive motors with PID output value
+        Motors((int)output,-(int)output); // Drive motors with PID output value
   
         vTaskDelay(25 / portTICK_PERIOD_MS); // Drive the motors at the control value for 25ms, before running the control loop again
       } /* end turning 90 degrees loop */
@@ -203,15 +186,21 @@ void TaskDriveStraight(void *pvParameters) {
         int16_t headingDiff = currentHeading - setHeading; // Figure out if we need to move left or right, and control motors based on that
         // Runs the motors for 20ms at the control output value to drive towards the set point.
         if(headingDiff > 0) { // Left
-          leftMotorValue = 0;
-          rightMotorValue = (int)abs(output);
-          Motors(leftMotorValue,rightMotorValue);      
+          Motors(0,(int)abs(output));
+          cyclesSinceCorrectionStraight++;
+          cyclesSinceCorrectionLeft = 0;
+          cyclesSinceCorrectionRight++;   
           vTaskDelay(30 / portTICK_PERIOD_MS);    
         } else if(headingDiff < 0) { // Right
-          leftMotorValue = (int)abs(output);
-          rightMotorValue = 0;
-          Motors(leftMotorValue, rightMotorValue); 
+          Motors((int)abs(output), 0); 
+          cyclesSinceCorrectionStraight++;
+          cyclesSinceCorrectionLeft++;
+          cyclesSinceCorrectionRight = 0;
           vTaskDelay(30 / portTICK_PERIOD_MS);
+        } else {
+          cyclesSinceCorrectionStraight = 0;
+          cyclesSinceCorrectionLeft++;
+          cyclesSinceCorrectionRight++;
         }
 
         Motors(100, 100);  // Drive the motor straight for 30ms to progress forward. The control part above will correct any errors
@@ -223,6 +212,9 @@ void TaskDriveStraight(void *pvParameters) {
         SetPixelRGB( 4, 0, straightLoopCounter, 0);
         if(straightLoopCounter == directionDataDistance) {
           straightLoopCounter = 0;
+          cyclesSinceCorrectionStraight = 0;
+          cyclesSinceCorrectionLeft = 0;
+          cyclesSinceCorrectionRight = 0;
           Motors(0,0);
           SetPixelRGB( 4, 0, 0, 0);
           SetPixelRGB( 5, 0, 0, 0);
@@ -257,13 +249,14 @@ void TaskControl(void *pvParameters) {
     if(!isObstacle && !isAvoidingObstacle) { // If no obstacle, go straight (to reach goal)
       //Serial.println("Straight");
       directionDataAngle = 0;
-      directionDataDistance = 100;
+      directionDataDistance = 50;
       isTurning = false;
       isDrivingStraight = true;
     } else if(!isAvoidingObstacle) { // Try to go around obstacle.
       //Serial.println("Setup avoidance");
       SimpleGyroNavigation();  // Pull sensors
       int16_t currentHeading = GetDegrees();      
+      // todo: might want to back up too
       directions[0] = (directionData){.angle=currentHeading+90, .distance=0, .isTurn=true}; // turn 90 degrees
       directions[1] = (directionData){.angle=currentHeading+90, .distance=25, .isTurn=false}; // straight 25
       directions[2] = (directionData){.angle=currentHeading, .distance=0, .isTurn=true}; // turn -90
@@ -301,7 +294,7 @@ void TaskCheckForObstacle(void *pvParameters) {
    // Task setup here (like set a pin mode)
    // Task loop here
    while(1) { /* begin task loop */
-    isObstacle = checkForObstacle(false); // Update global variable
+    isObstacle = checkForObstacle(); // Update global variable
     vTaskDelay(100 / portTICK_PERIOD_MS); // Schedule to run every 100ms
    }
 }
