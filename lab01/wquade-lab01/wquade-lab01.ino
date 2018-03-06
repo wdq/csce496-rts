@@ -2,7 +2,7 @@
 #include "RingoHardware.h"
 
 #define TURN_ANGLE    88 // 87 sometimes seems to work better, other times 88
-#define CYCLES_SINCE_CORRECTION_THRESHOLD  3
+#define CYCLES_SINCE_CORRECTION_THRESHOLD  100
 
 // Some global variables
 bool isTurning = false; // These first two are used to keep track of if we're going straight or turning, defaults to straight.
@@ -42,12 +42,14 @@ directionData directions[8];
 void TaskTurn(void *pvParameters); // Turn
 void TaskDriveStraight(void *pvParameters); // Go straight
 void TaskControl(void *pvParameters);   // Control the robot by triggering the other tasks.
-void TaskCheckForObstacle(void *pvParameters); // Check for obstacles
 
 // Check for obstacle based on PID controller corrections not moving, return true if obstacle, otherwise false.
 bool checkForObstacle() {
   if(isAvoidingObstacle) {
     return false; // Already handling it, so no obstacle.
+  }
+  if(isObstacle) {
+    return true;
   }
   if(cyclesSinceCorrectionStraight >= CYCLES_SINCE_CORRECTION_THRESHOLD || 
         cyclesSinceCorrectionLeft >= CYCLES_SINCE_CORRECTION_THRESHOLD ||
@@ -78,34 +80,26 @@ void taskSetup() {
   xTaskCreate(
     TaskTurn, // task function
     (const portCHAR *)"Turn", // task name string
-    75, // stack size
+    95, // stack size
     NULL, // nothing
-    1, // Priority, 0 is lowest
+    0, // Priority, 0 is lowest
     NULL); // nothing
     
   xTaskCreate(
     TaskDriveStraight, // task function
     (const portCHAR *)"DriveStraight", // task name string
-    85, // stack size
+    110, // stack size
     NULL, // nothing
-    2, // Priority, 0 is lowest
+    1, // Priority, 0 is lowest
     NULL); // nothing   
     
   xTaskCreate(
     TaskControl, // task function
     (const portCHAR *)"Control", // task name string
-    130, // stack size
+    145, // stack size
     NULL, // nothing
-    3, // Priority, 0 is lowest
-    NULL); // nothing    
-    
-  xTaskCreate(
-    TaskCheckForObstacle, // task function
-    (const portCHAR *)"CheckForObstacle", // task name string
-    50, // stack size
-    NULL, // nothing
-    0, // Priority, 0 is lowest
-    NULL); // nothing                 
+    2, // Priority, 0 is lowest
+    NULL); // nothing                   
 }
 
 // First run code
@@ -189,19 +183,26 @@ void TaskDriveStraight(void *pvParameters) {
           Motors(0,(int)abs(output));
           cyclesSinceCorrectionStraight++;
           cyclesSinceCorrectionLeft = 0;
-          cyclesSinceCorrectionRight++;   
+          cyclesSinceCorrectionRight++;
+          SetPixelRGB( 3, 255, 0, 0);
+          RefreshPixels();   
           vTaskDelay(30 / portTICK_PERIOD_MS);    
         } else if(headingDiff < 0) { // Right
           Motors((int)abs(output), 0); 
           cyclesSinceCorrectionStraight++;
           cyclesSinceCorrectionLeft++;
           cyclesSinceCorrectionRight = 0;
+          SetPixelRGB( 3, 0, 255, 0);
+          RefreshPixels();  
           vTaskDelay(30 / portTICK_PERIOD_MS);
         } else {
           cyclesSinceCorrectionStraight = 0;
           cyclesSinceCorrectionLeft++;
           cyclesSinceCorrectionRight++;
+          SetPixelRGB( 3, 0, 0, 255);
+          RefreshPixels();
         }
+        isObstacle = checkForObstacle();
 
         Motors(100, 100);  // Drive the motor straight for 30ms to progress forward. The control part above will correct any errors
         straightLoopCounter++; // Keep track of the number of straight driving runs, and change modes back to a turn after 80
@@ -212,10 +213,11 @@ void TaskDriveStraight(void *pvParameters) {
         SetPixelRGB( 4, 0, straightLoopCounter, 0);
         if(straightLoopCounter == directionDataDistance) {
           straightLoopCounter = 0;
-          cyclesSinceCorrectionStraight = 0;
-          cyclesSinceCorrectionLeft = 0;
-          cyclesSinceCorrectionRight = 0;
+          //cyclesSinceCorrectionStraight = 0;
+          //cyclesSinceCorrectionLeft = 0;
+          //cyclesSinceCorrectionRight = 0;
           Motors(0,0);
+          SetPixelRGB( 3, 0, 0, 0);
           SetPixelRGB( 4, 0, 0, 0);
           SetPixelRGB( 5, 0, 0, 0);
           RefreshPixels();
@@ -257,10 +259,13 @@ void TaskControl(void *pvParameters) {
       SimpleGyroNavigation();  // Pull sensors
       int16_t currentHeading = GetDegrees();      
       // todo: might want to back up too
+      Motors(-100, -100);
+      vTaskDelay(250 / portTICK_PERIOD_MS);
+      Motors(0, 0);
       directions[0] = (directionData){.angle=currentHeading+90, .distance=0, .isTurn=true}; // turn 90 degrees
       directions[1] = (directionData){.angle=currentHeading+90, .distance=25, .isTurn=false}; // straight 25
       directions[2] = (directionData){.angle=currentHeading, .distance=0, .isTurn=true}; // turn -90
-      directions[3] = (directionData){.angle=currentHeading, .distance=25, .isTurn=false}; // straight 25
+      directions[3] = (directionData){.angle=currentHeading, .distance=50, .isTurn=false}; // straight 50
       directions[4] = (directionData){.angle=currentHeading-90, .distance=0, .isTurn=true}; // turn -90
       directions[5] = (directionData){.angle=currentHeading-90, .distance=25, .isTurn=false}; // straight 25
       directions[6] = (directionData){.angle=currentHeading, .distance=0, .isTurn=true}; // turn 90 degrees
@@ -278,6 +283,7 @@ void TaskControl(void *pvParameters) {
       isDrivingStraight = !isTurning;
       if(directionDataAngle == 0 && directionDataDistance == 0) { // stop condition
         isAvoidingObstacle = false;
+        isObstacle = false;
         isTurning = false;
         isDrivingStraight = false;
       }
@@ -285,17 +291,6 @@ void TaskControl(void *pvParameters) {
     }
     
     vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms, may need to lower this if there is a noticable pause in between switching the other tasks
-   }
-}
-
-// task code
-void TaskCheckForObstacle(void *pvParameters) {
-  (void) pvParameters;
-   // Task setup here (like set a pin mode)
-   // Task loop here
-   while(1) { /* begin task loop */
-    isObstacle = checkForObstacle(); // Update global variable
-    vTaskDelay(100 / portTICK_PERIOD_MS); // Schedule to run every 100ms
    }
 }
 
