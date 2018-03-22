@@ -168,44 +168,58 @@ void TaskDriveStraight(void *pvParameters) {
       SetPixelRGB( 4, 0, 0, 255); // set the lights to green
       SetPixelRGB( 5, 0, 0, 255);
       RefreshPixels();
-      PID pid = (PID){.kp=50, .ki=0, .kd=0, .integral=0, .error=0, .dt=50, .minimum=-100, .maximum=100}; // setup the PID controller      
+      PID pid = (PID){.kp=50, .ki=0, .kd=0, .integral=0, .error=0, .dt=25, .minimum=-100, .maximum=100}; // setup the PID controller      
       Motors(0,0); // Make sure the motors have stopped before doing anything (todo: maybe a small delay?)
       //ZeroNavigation();
       SimpleGyroNavigation(); // Pull sensors
       int16_t setHeading = directionDataAngle;
+      bool straightPush = true;
       while(isDrivingStraight) { /* begin driving straight loop */
         SimpleGyroNavigation();  // Pull sensors
         int16_t currentHeading = GetDegrees();
         int16_t output = CalculatePID(setHeading, currentHeading, &pid); // Get control output
         int16_t headingDiff = currentHeading - setHeading; // Figure out if we need to move left or right, and control motors based on that
         // Runs the motors for 20ms at the control output value to drive towards the set point.
-        if(headingDiff > 0) { // Left
-          Motors(0,(int)abs(output));
-          cyclesSinceCorrectionStraight++;
-          cyclesSinceCorrectionLeft = 0;
-          cyclesSinceCorrectionRight++;
-          SetPixelRGB( 3, 255, 0, 0);
-          RefreshPixels();   
-          vTaskDelay(30 / portTICK_PERIOD_MS);    
-        } else if(headingDiff < 0) { // Right
-          Motors((int)abs(output), 0); 
-          cyclesSinceCorrectionStraight++;
-          cyclesSinceCorrectionLeft++;
-          cyclesSinceCorrectionRight = 0;
-          SetPixelRGB( 3, 0, 255, 0);
-          RefreshPixels();  
-          vTaskDelay(30 / portTICK_PERIOD_MS);
+        if(straightPush) {
+          straightPush = false;
+          straightLoopCounter++; // Keep track of the number of straight driving runs, and change modes back to a turn after 80
+          if(headingDiff == 0) {
+            cyclesSinceCorrectionStraight = 0;
+            cyclesSinceCorrectionLeft++;
+            cyclesSinceCorrectionRight++;
+            SetPixelRGB( 3, 0, 0, 255);
+            RefreshPixels();
+          }
+          Motors(100, 100);  // Drive the motor straight for 30ms to progress forward. The control part above will correct any errors
         } else {
-          cyclesSinceCorrectionStraight = 0;
-          cyclesSinceCorrectionLeft++;
-          cyclesSinceCorrectionRight++;
-          SetPixelRGB( 3, 0, 0, 255);
-          RefreshPixels();
+          straightPush = true;
+          if(headingDiff > 0) { // Left
+            Motors(0,(int)abs(output));
+            cyclesSinceCorrectionStraight++;
+            cyclesSinceCorrectionLeft = 0;
+            cyclesSinceCorrectionRight++;
+            SetPixelRGB( 3, 255, 0, 0);
+            RefreshPixels();   
+            //vTaskDelay(30 / portTICK_PERIOD_MS);    
+          } else if(headingDiff < 0) { // Right
+            Motors((int)abs(output), 0); 
+            cyclesSinceCorrectionStraight++;
+            cyclesSinceCorrectionLeft++;
+            cyclesSinceCorrectionRight = 0;
+            SetPixelRGB( 3, 0, 255, 0);
+            RefreshPixels();  
+            //vTaskDelay(30 / portTICK_PERIOD_MS);
+          } else {
+            cyclesSinceCorrectionStraight = 0;
+            cyclesSinceCorrectionLeft++;
+            cyclesSinceCorrectionRight++;
+            SetPixelRGB( 3, 0, 0, 255);
+            RefreshPixels();
+          }
         }
+
         isObstacle = checkForObstacle();
 
-        Motors(100, 100);  // Drive the motor straight for 30ms to progress forward. The control part above will correct any errors
-        straightLoopCounter++; // Keep track of the number of straight driving runs, and change modes back to a turn after 80
         // This can be used to control how long the sides of the square/rectangle are, at least sort of, it isn't quite perfect.
         // Originally I did a fixed run time before changing modes (in a third task), but had some issues with inconsistency from it sometimes being
         // stopped when it was turning right or left to correct the straight line driving, this guarantees that it always stops at the same spot, 
@@ -225,7 +239,7 @@ void TaskDriveStraight(void *pvParameters) {
         }
         
   
-        vTaskDelay(20 / portTICK_PERIOD_MS); // Drive the motors straight for 30ms
+        vTaskDelay(25 / portTICK_PERIOD_MS); // run for 25ms
       } /* end driving straight loop */
     } /* end if driving straight */
     vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms (this runs when the task is idle, not going straight)
