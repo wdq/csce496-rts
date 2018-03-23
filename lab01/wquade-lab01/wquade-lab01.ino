@@ -253,10 +253,6 @@ void TaskControl(void *pvParameters) {
    // Task loop here
    int directionIndex = 0;
    while(1) { /* begin task loop */
-    //SimpleGyroNavigation(); 
-    //int16_t currentHeading = GetDegrees();
-    //Serial.println(currentHeading);
-    //vTaskDelay(100 / portTICK_PERIOD_MS); // Schedule to run every 100ms
 
     while(isDrivingStraight || isTurning) { // Wait for the straight or turn task to do its thing
       vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms      
@@ -273,8 +269,8 @@ void TaskControl(void *pvParameters) {
       SimpleGyroNavigation();  // Pull sensors
       int16_t currentHeading = GetDegrees();      
       // todo: might want to back up too
-      Motors(-100, -100);
-      vTaskDelay(250 / portTICK_PERIOD_MS);
+      //Motors(-100, -100);
+      //vTaskDelay(250 / portTICK_PERIOD_MS);
       Motors(0, 0);
       directions[0] = (directionData){.angle=currentHeading+90, .distance=0, .isTurn=true}; // turn 90 degrees
       directions[1] = (directionData){.angle=currentHeading+90, .distance=25, .isTurn=false}; // straight 25
@@ -286,23 +282,27 @@ void TaskControl(void *pvParameters) {
       directions[7] = (directionData){.angle=0, .distance=0, .isTurn=false}; // stop      
       directionIndex = 0;
       isAvoidingObstacle = true;
+      Motors(-100, -100); // Back up
+    } else {
+      if(isAvoidingObstacle) {
+        //Serial.println("Avoiding");
+        // Get the next direction
+        Motors(0, 0);
+        directionDataAngle = directions[directionIndex].angle;
+        directionDataDistance = directions[directionIndex].distance;
+        isTurning = directions[directionIndex].isTurn;
+        isDrivingStraight = !isTurning;
+        if(directionDataAngle == 0 && directionDataDistance == 0) { // stop condition
+          isAvoidingObstacle = false;
+          isObstacle = false;
+          isTurning = false;
+          isDrivingStraight = false;
+        }
+        directionIndex++;
+      }
     }
 
-    if(isAvoidingObstacle) {
-      //Serial.println("Avoiding");
-      // Get the next direction
-      directionDataAngle = directions[directionIndex].angle;
-      directionDataDistance = directions[directionIndex].distance;
-      isTurning = directions[directionIndex].isTurn;
-      isDrivingStraight = !isTurning;
-      if(directionDataAngle == 0 && directionDataDistance == 0) { // stop condition
-        isAvoidingObstacle = false;
-        isObstacle = false;
-        isTurning = false;
-        isDrivingStraight = false;
-      }
-      directionIndex++;
-    }
+
     
     vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms, may need to lower this if there is a noticable pause in between switching the other tasks
    }
