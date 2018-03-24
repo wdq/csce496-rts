@@ -182,6 +182,7 @@ void TaskDriveStraight() {
           RefreshPixels();  
           //vTaskDelay(30 / portTICK_PERIOD_MS);
         } else {
+          Motors(100, 100);
           cyclesSinceCorrectionStraight = 0;
           cyclesSinceCorrectionLeft++;
           cyclesSinceCorrectionRight++;
