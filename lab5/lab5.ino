@@ -43,6 +43,8 @@ uint8_t cyclesSinceCorrectionLeft = 0;
 uint8_t cyclesSinceCorrectionRight = 0;
 uint8_t cyclesSinceCorrectionStraight = 0;
 
+// This is used in the control task to do maneuvers
+int directionIndex = 0;
 int16_t directionDataAngle;
 uint8_t directionDataDistance;
 directionData directions[8];
@@ -50,6 +52,7 @@ directionData directions[8];
 // These are for the drive straight task.
 uint8_t straightLoopCounter = 0;
 bool straightPush = true;
+
 
 /////////////////////////////////////////////////////////////////////////////
 ////                       Helper Functions                              ////
@@ -115,6 +118,7 @@ void TaskTurn() {
       if(abs(abs(setHeading) - abs(currentHeading)) == 0) { // If we have reached set point, stop.
         Motors(0,0);
         isTurning = false; // Change modes
+        SetPixelRGB( 0, 0, 255, 0);
         SetPixelRGB( 4, 0, 0, 0);
         SetPixelRGB( 5, 0, 0, 0);
         RefreshPixels();
@@ -217,7 +221,6 @@ void TaskDriveStraight() {
 void TaskControl() {
    // Task setup here (like set a pin mode)
    // Task loop here
-   int directionIndex = 0;
    
     if(isDrivingStraight || isTurning) { // Wait for the straight or turn task to do its thing
       return; // Nothing to do if the other tasks are doing their thing  
@@ -229,7 +232,7 @@ void TaskControl() {
       directionDataDistance = 50;
       isTurning = false;
       isDrivingStraight = true;
-    } else if(!isAvoidingObstacle) { // Try to go around obstacle.
+    } else if(isObstacle && !isAvoidingObstacle) { // Try to go around obstacle.
       //Serial.println("Setup avoidance");
       SimpleGyroNavigation();  // Pull sensors
       int16_t currentHeading = GetDegrees();      
@@ -238,33 +241,35 @@ void TaskControl() {
       //vTaskDelay(250 / portTICK_PERIOD_MS);
       Motors(0, 0);
       directions[0] = (directionData){.angle=currentHeading+90, .distance=0, .isTurn=true}; // turn 90 degrees
-      directions[1] = (directionData){.angle=currentHeading+90, .distance=25, .isTurn=false}; // straight 25
+      directions[1] = (directionData){.angle=currentHeading+90, .distance=50, .isTurn=false}; // straight 50
       directions[2] = (directionData){.angle=currentHeading, .distance=0, .isTurn=true}; // turn -90
       directions[3] = (directionData){.angle=currentHeading, .distance=50, .isTurn=false}; // straight 50
       directions[4] = (directionData){.angle=currentHeading-90, .distance=0, .isTurn=true}; // turn -90
-      directions[5] = (directionData){.angle=currentHeading-90, .distance=25, .isTurn=false}; // straight 25
+      directions[5] = (directionData){.angle=currentHeading-90, .distance=50, .isTurn=false}; // straight 50
       directions[6] = (directionData){.angle=currentHeading, .distance=0, .isTurn=true}; // turn 90 degrees
       directions[7] = (directionData){.angle=0, .distance=0, .isTurn=false}; // stop      
       directionIndex = 0;
       isAvoidingObstacle = true;
       Motors(-100, -100); // Back up
-    } else {
-      if(isAvoidingObstacle) {
-        //Serial.println("Avoiding");
-        // Get the next direction
-        Motors(0, 0);
-        directionDataAngle = directions[directionIndex].angle;
-        directionDataDistance = directions[directionIndex].distance;
-        isTurning = directions[directionIndex].isTurn;
-        isDrivingStraight = !isTurning;
-        if(directionDataAngle == 0 && directionDataDistance == 0) { // stop condition
-          isAvoidingObstacle = false;
-          isObstacle = false;
-          isTurning = false;
-          isDrivingStraight = false;
-        }
-        directionIndex++;
+    } 
+    
+    if(isAvoidingObstacle) {
+      //Serial.println("Avoiding");
+      // Get the next direction
+      Motors(0, 0);
+      directionDataAngle = directions[directionIndex].angle;
+      directionDataDistance = directions[directionIndex].distance;
+      isTurning = directions[directionIndex].isTurn;
+      isDrivingStraight = !isTurning;
+      if(directionDataAngle == 0 && directionDataDistance == 0) { // stop condition
+        isAvoidingObstacle = false;
+        isObstacle = false;
+        isTurning = false;
+        isDrivingStraight = false;
       }
+      directionIndex++;
+      SetPixelRGB( 0, 0, 0, 0);
+      RefreshPixels();
     }
     return;
 }
