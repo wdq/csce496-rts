@@ -40,6 +40,10 @@
 // Semaphores
 SemaphoreHandle_t ledSemaphore; // Create an available semaphore for using LED hardware
 SemaphoreHandle_t motorSemaphore; // Create an available semaphore for using motor hardware
+SemaphoreHandle_t obstacleSemaphore; // Used to manage isAvoidingObstacle, and isObstacle variables
+SemaphoreHandle_t straightCorrectionSemaphore; // Used to manage cyclesSinceCorrectionStraight, cyclesSinceCorrectionLeft, cyclesSinceCorrectionRight variables
+SemaphoreHandle_t directionDataSemaphore; // Used to manage directionDataAngle, directionDataDistance, directions variables
+SemaphoreHandle_t modeSemaphore; // Used to manage isDrivingStraight, isTurning
 
 // Some global variables
 bool isTurning = false; // These first two are used to keep track of if we're going straight or turning, defaults to straight.
@@ -85,11 +89,25 @@ void TaskDriveStraight(void *pvParameters); // Go straight
 void TaskControl(void *pvParameters);   // Control the robot by triggering the other tasks.
 
 // Check for obstacle based on PID controller corrections not moving, return true if obstacle, otherwise false.
+// Global vars list:
+// 1. isAvoidingObstacle
+// 2. isObstacle
+// 3. cyclesSinceCorrectionStraight
+// 4. cyclesSinceCorrectionLeft
+// 5. cyclesSinceCorrectionRight
 bool checkForObstacle() {
+  while(xSemaphoreTake(obstacleSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
+  while(xSemaphoreTake(straightCorrectionSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
   if(isAvoidingObstacle) {
+    isObstacle = false;
+    xSemaphoreGive(straightCorrectionSemaphore); // Release the semaphore 
+    xSemaphoreGive(obstacleSemaphore); // Release the semaphore 
     return false; // Already handling it, so no obstacle.
   }
   if(isObstacle) {
+    isObstacle = true;
+    xSemaphoreGive(straightCorrectionSemaphore); // Release the semaphore 
+    xSemaphoreGive(obstacleSemaphore); // Release the semaphore     
     return true;
   }
   if(cyclesSinceCorrectionStraight >= CYCLES_SINCE_CORRECTION_THRESHOLD || 
@@ -98,8 +116,14 @@ bool checkForObstacle() {
     cyclesSinceCorrectionStraight = 0;
     cyclesSinceCorrectionLeft = 0;
     cyclesSinceCorrectionRight = 0;
+    isObstacle = true;
+    xSemaphoreGive(straightCorrectionSemaphore); // Release the semaphore 
+    xSemaphoreGive(obstacleSemaphore); // Release the semaphore     
     return true; // Obstacle    
   }
+  isObstacle = false;
+  xSemaphoreGive(straightCorrectionSemaphore); // Release the semaphore 
+  xSemaphoreGive(obstacleSemaphore); // Release the semaphore   
   return false; // No obstacle
 }
 
@@ -144,6 +168,10 @@ void setup(){
   // Initialize semaphores
   vSemaphoreCreateBinary(ledSemaphore);
   vSemaphoreCreateBinary(motorSemaphore);
+  vSemaphoreCreateBinary(obstacleSemaphore);
+  vSemaphoreCreateBinary(straightCorrectionSemaphore);
+  vSemaphoreCreateBinary(directionDataSemaphore);
+  vSemaphoreCreateBinary(modeSemaphore);
       
   delay(2000); // Delay so that my hand can move away before gyro calibrates
   ringoSetup(); // Setup ringo stuff
@@ -155,24 +183,33 @@ void setup(){
 void loop(){}
 
 // task code
+// Global vars list:
+// 1. isTurning
+// 2. directionDataAngle
 void TaskTurn(void *pvParameters) {
   (void) pvParameters;
    // Task setup here (like set a pin mode)
    // Task loop here
    while(1) { /* begin task loop */
+    while(xSemaphoreTake(modeSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
     if(isTurning) { /* begin if turning 90 degrees */
+      xSemaphoreGive(modeSemaphore); // Release the semaphore 
       MySetPixelRGB( 4, 255, 0, 0); // Set the lights to red
       MySetPixelRGB( 5, 255, 0, 0);
       MyRefreshPixels();
       PID pid = (PID){.kp=3, .ki=0, .kd=100, .integral=0, .error=0, .dt=30, .minimum=-90, .maximum=90}; // setup the PID controller
       MyMotors(0,0); // Make sure the motors have stopped before doing anything (todo: maybe a small delay?)
+      while(xSemaphoreTake(directionDataSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
       int16_t setHeading = directionDataAngle;
+      xSemaphoreGive(directionDataSemaphore); // Release the semaphore
       
       MySimpleGyroNavigation(); // Pull sensors
       int16_t currentHeading = MyGetDegrees();
       if(abs(abs(setHeading) - abs(currentHeading)) == 0) { // If we have reached set point, stop.
         MyMotors(0,0);
+        while(xSemaphoreTake(modeSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
         isTurning = false; // Change modes
+        xSemaphoreGive(modeSemaphore); // Release the semaphore 
         MySetPixelRGB( 0, 0, 255, 0);
         MySetPixelRGB( 4, 0, 0, 0);
         MySetPixelRGB( 5, 0, 0, 0);
@@ -188,31 +225,47 @@ void TaskTurn(void *pvParameters) {
       }
       MyMotors((int)output,-(int)output); // Drive motors with PID output value
   
+    } else {
+      xSemaphoreGive(modeSemaphore); // Release the semaphore     
     } /* end if turning 90 degrees */
     vTaskDelay(25 / portTICK_PERIOD_MS); // Schedule to run every 25ms (this runs when the task is idle, not turning)
    } /* end task loop */
 }
 
 // task code
+// Global vars list:
+// 1. isDrivingStraight
+// 2. directionDataAngle
+// 3. straightPush
+// 4. cyclesSinceCorrectionStraight
+// 5. cyclesSinceCorrectionLeft
+// 6. cyclesSinceCorrectionRight
+// 7. directionDataDistance
+// 8. isObstacle
 void TaskDriveStraight(void *pvParameters) {
   (void) pvParameters;
    // Task setup here (like set a pin mode)
    // Task loop here
    uint8_t straightLoopCounter = 0;
    while(1) { /* begin task loop */
+    while(xSemaphoreTake(modeSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
     if(isDrivingStraight) { /* begin if driving straight */
+      xSemaphoreGive(modeSemaphore); // Release the semaphore
       MySetPixelRGB( 4, 0, 0, 255); // set the lights to green
       MySetPixelRGB( 5, 0, 0, 255);
       MyRefreshPixels();
       PID pid = (PID){.kp=50, .ki=0, .kd=0, .integral=0, .error=0, .dt=30, .minimum=-100, .maximum=100}; // setup the PID controller      
       MyMotors(0,0); // Make sure the motors have stopped before doing anything (todo: maybe a small delay?)
+      while(xSemaphoreTake(directionDataSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
       int16_t setHeading = directionDataAngle;
-      
+      xSemaphoreGive(directionDataSemaphore); // Release the semaphore
+            
       MySimpleGyroNavigation();  // Pull sensors
       int16_t currentHeading = MyGetDegrees();
       int16_t output = CalculatePID(setHeading, currentHeading, &pid); // Get control output
       int16_t headingDiff = currentHeading - setHeading; // Figure out if we need to move left or right, and control motors based on that
       // Runs the motors for 20ms at the control output value to drive towards the set point.
+      while(xSemaphoreTake(straightCorrectionSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
       if(straightPush) {
         straightPush = false;
         straightLoopCounter++; // Keep track of the number of straight driving runs, and change modes back to a turn after 80
@@ -251,13 +304,17 @@ void TaskDriveStraight(void *pvParameters) {
           MyRefreshPixels();
         }
       }
+      xSemaphoreGive(straightCorrectionSemaphore); // Release the semaphore 
 
-      isObstacle = checkForObstacle();
+      checkForObstacle();
 
       // This can be used to control how long the sides of the square/rectangle are, at least sort of, it isn't quite perfect.
       // Originally I did a fixed run time before changing modes (in a third task), but had some issues with inconsistency from it sometimes being
       // stopped when it was turning right or left to correct the straight line driving, this guarantees that it always stops at the same spot, 
       // and doesn't require that I disable interrupts or anything. 
+      while(xSemaphoreTake(straightCorrectionSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
+      while(xSemaphoreTake(directionDataSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
+      while(xSemaphoreTake(modeSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
       MySetPixelRGB( 4, 0, straightLoopCounter, 0);
       if(straightLoopCounter == directionDataDistance) {
         straightLoopCounter = 0;
@@ -268,12 +325,25 @@ void TaskDriveStraight(void *pvParameters) {
         MyRefreshPixels();
         isDrivingStraight = false; // Change modes
       }
-    } /* end if driving straight */
+     xSemaphoreGive(modeSemaphore); // Release the semaphore
+     xSemaphoreGive(directionDataSemaphore); // Release the semaphore
+     xSemaphoreGive(straightCorrectionSemaphore); // Release the semaphore
+    } else {
+      xSemaphoreGive(modeSemaphore); // Release the semaphore
+    }/* end if driving straight */
     vTaskDelay(30 / portTICK_PERIOD_MS); // Schedule to run every 30ms (this runs when the task is idle, not going straight)
    } /* end task loop */
 }
 
 // task code
+// Global vars list:
+// 1. isDrivingStraight
+// 2. isTurning
+// 3. isObstacle
+// 4. directionDataAngle
+// 5. directionDataDistance
+// 6. isAvoidingObstacle
+// 7. directions[]
 void TaskControl(void *pvParameters) {
   (void) pvParameters;
    // Task setup here (like set a pin mode)
@@ -281,10 +351,16 @@ void TaskControl(void *pvParameters) {
    int directionIndex = 0;
    while(1) { /* begin task loop */
 
+    while(xSemaphoreTake(modeSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
     if(isDrivingStraight || isTurning) { // Wait for the straight or turn task to do its thing
+      xSemaphoreGive(modeSemaphore); // Release the semaphore
       return; // Nothing to do if the other tasks are doing their thing  
     }
+    xSemaphoreGive(modeSemaphore); // Release the semaphore
 
+    while(xSemaphoreTake(obstacleSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
+    while(xSemaphoreTake(directionDataSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
+    while(xSemaphoreTake(modeSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
     if(!isObstacle && !isAvoidingObstacle) { // If no obstacle, go straight (to reach goal)
       //Serial.println("Straight");
       directionDataAngle = 0;
@@ -330,6 +406,10 @@ void TaskControl(void *pvParameters) {
       MySetPixelRGB( 0, 0, 0, 0);
       MyRefreshPixels();
     }
+
+    xSemaphoreGive(modeSemaphore); // Release the semaphore 
+    xSemaphoreGive(directionDataSemaphore); // Release the semaphore 
+    xSemaphoreGive(ledSemaphore); // Release the semaphore 
 
 
     
