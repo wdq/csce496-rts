@@ -3,15 +3,18 @@
 #include <Adafruit_NeoPixel.h>
 
 #define Light_Bus_BTN1 7 //for 6 neo pixel RGB
-
 #define NUM_PIXELS 6
-
 #define EYE_LEFT 5
 #define EYE_RIGHT 4 
 #define BODY_TOP 3
 #define BODY_BOTTOM 2
 #define TAIL_TOP 0
 #define TAIL_BOTTOM 1
+
+#define MotorDirection_Right 1
+#define MotorDirection_Left 0
+#define MotorDrive_Left 6
+#define MotorDrive_Right 5
 
 #define TURN_ANGLE    88 // 87 sometimes seems to work better, other times 88
 #define CYCLES_SINCE_CORRECTION_THRESHOLD  100
@@ -73,6 +76,37 @@ void MyRefreshPixels(){
   //xSemaphoreGive(ledSemaphore); // Release the semaphore 
 }
 
+void MySetupMotors() {
+  // Motors begin
+  pinMode(MotorDirection_Left, OUTPUT);
+  pinMode(MotorDirection_Right, OUTPUT);
+  analogWrite(MotorDrive_Left,0);
+  analogWrite(MotorDrive_Right,0); 
+}
+
+// Motor control function from Ringo.
+// Is reentrant, hardware access guarded by semaphore
+void MyMotors(int16_t LeftMotor, int16_t RightMotor) {
+  //while(xSemaphoreTake(motorSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
+  // Had some logic to bound the speeds to the min/max.
+  // I removed this since not needed since I know the bounds.
+  // Also got rid of the use of the global motor speed variables.
+  if(LeftMotor<0){
+    digitalWrite(MotorDirection_Left,0);
+  } else {
+    digitalWrite(MotorDirection_Left,1);
+  }
+  if(RightMotor<0){
+    digitalWrite(MotorDirection_Right,0);
+  } else {
+    digitalWrite(MotorDirection_Right,1);
+  }
+    
+  analogWrite(MotorDrive_Left,abs(LeftMotor));
+  analogWrite(MotorDrive_Right,abs(RightMotor));
+  //xSemaphoreGive(motorSemaphore); // Release the semaphore 
+}
+
 // Define tasks
 void TaskTurn(void *pvParameters); // Turn
 void TaskDriveStraight(void *pvParameters); // Go straight
@@ -101,6 +135,7 @@ bool checkForObstacle() {
 void ringoSetup() {
   HardwareBegin();        //initialize Ringo's brain to work with his circuitry   
   MySetupPixels();
+  MySetupMotors();
   //PlayStartChirp();       //Play startup chirp and blink eyes
   //NavigationBegin();
   //SimpleGyroNavigation(); 
@@ -162,7 +197,7 @@ void TaskTurn(void *pvParameters) {
       MySetPixelRGB( 5, 255, 0, 0);
       MyRefreshPixels();
       PID pid = (PID){.kp=3, .ki=0, .kd=100, .integral=0, .error=0, .dt=25, .minimum=-90, .maximum=90}; // setup the PID controller
-      Motors(0,0); // Make sure the motors have stopped before doing anything (todo: maybe a small delay?)
+      MyMotors(0,0); // Make sure the motors have stopped before doing anything (todo: maybe a small delay?)
       //ZeroNavigation();
       SimpleGyroNavigation(); // Pull sensors
       int16_t setHeading = directionDataAngle;
@@ -170,7 +205,7 @@ void TaskTurn(void *pvParameters) {
         SimpleGyroNavigation(); // Pull sensors
         int16_t currentHeading = GetDegrees();
         if(abs(abs(setHeading) - abs(currentHeading)) == 0) { // If we have reached set point, stop.
-          Motors(0,0);
+          MyMotors(0,0);
           isTurning = false; // Change modes
           MySetPixelRGB( 4, 0, 0, 0);
           MySetPixelRGB( 5, 0, 0, 0);
@@ -184,7 +219,7 @@ void TaskTurn(void *pvParameters) {
         } else if(output < 0) { // Need to move left
           output = output - 12;
         }
-        Motors((int)output,-(int)output); // Drive motors with PID output value
+        MyMotors((int)output,-(int)output); // Drive motors with PID output value
   
         vTaskDelay(25 / portTICK_PERIOD_MS); // Drive the motors at the control value for 25ms, before running the control loop again
       } /* end turning 90 degrees loop */
@@ -205,7 +240,7 @@ void TaskDriveStraight(void *pvParameters) {
       MySetPixelRGB( 5, 0, 0, 255);
       MyRefreshPixels();
       PID pid = (PID){.kp=50, .ki=0, .kd=0, .integral=0, .error=0, .dt=50, .minimum=-100, .maximum=100}; // setup the PID controller      
-      Motors(0,0); // Make sure the motors have stopped before doing anything (todo: maybe a small delay?)
+      MyMotors(0,0); // Make sure the motors have stopped before doing anything (todo: maybe a small delay?)
       //ZeroNavigation();
       SimpleGyroNavigation(); // Pull sensors
       int16_t setHeading = directionDataAngle;
@@ -216,7 +251,7 @@ void TaskDriveStraight(void *pvParameters) {
         int16_t headingDiff = currentHeading - setHeading; // Figure out if we need to move left or right, and control motors based on that
         // Runs the motors for 20ms at the control output value to drive towards the set point.
         if(headingDiff > 0) { // Left
-          Motors(0,(int)abs(output));
+          MyMotors(0,(int)abs(output));
           cyclesSinceCorrectionStraight++;
           cyclesSinceCorrectionLeft = 0;
           cyclesSinceCorrectionRight++;
@@ -224,7 +259,7 @@ void TaskDriveStraight(void *pvParameters) {
           MyRefreshPixels();   
           vTaskDelay(30 / portTICK_PERIOD_MS);    
         } else if(headingDiff < 0) { // Right
-          Motors((int)abs(output), 0); 
+          MyMotors((int)abs(output), 0); 
           cyclesSinceCorrectionStraight++;
           cyclesSinceCorrectionLeft++;
           cyclesSinceCorrectionRight = 0;
@@ -240,7 +275,7 @@ void TaskDriveStraight(void *pvParameters) {
         }
         isObstacle = checkForObstacle();
 
-        Motors(100, 100);  // Drive the motor straight for 30ms to progress forward. The control part above will correct any errors
+        MyMotors(100, 100);  // Drive the motor straight for 30ms to progress forward. The control part above will correct any errors
         straightLoopCounter++; // Keep track of the number of straight driving runs, and change modes back to a turn after 80
         // This can be used to control how long the sides of the square/rectangle are, at least sort of, it isn't quite perfect.
         // Originally I did a fixed run time before changing modes (in a third task), but had some issues with inconsistency from it sometimes being
@@ -253,7 +288,7 @@ void TaskDriveStraight(void *pvParameters) {
           //cyclesSinceCorrectionStraight = 0;
           //cyclesSinceCorrectionLeft = 0;
           //cyclesSinceCorrectionRight = 0;
-          Motors(0,0);
+          MyMotors(0,0);
           MySetPixelRGB( 3, 0, 0, 0);
           MySetPixelRGB( 4, 0, 0, 0);
           MySetPixelRGB( 5, 0, 0, 0);
@@ -296,9 +331,9 @@ void TaskControl(void *pvParameters) {
       SimpleGyroNavigation();  // Pull sensors
       int16_t currentHeading = GetDegrees();      
       // todo: might want to back up too
-      Motors(-100, -100);
+      MyMotors(-100, -100);
       vTaskDelay(250 / portTICK_PERIOD_MS);
-      Motors(0, 0);
+      MyMotors(0, 0);
       directions[0] = (directionData){.angle=currentHeading+90, .distance=0, .isTurn=true}; // turn 90 degrees
       directions[1] = (directionData){.angle=currentHeading+90, .distance=25, .isTurn=false}; // straight 25
       directions[2] = (directionData){.angle=currentHeading, .distance=0, .isTurn=true}; // turn -90
