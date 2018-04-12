@@ -1,3 +1,4 @@
+#include <Arduino_FreeRTOS.h>
 #include "ci2c.h"
 
 #define    L3GD20_REGISTER_WHO_AM_I             0x0F   // 11010100   r
@@ -31,6 +32,8 @@
 
 #define   GYRO_ADDRESS  0x6B
 
+void TaskGyro(void *pvParameters); // Update gyro degrees
+
 float gyroAngle = 0;
 int16_t gyroDegrees = 0;
 uint8_t gyroLoopCount = 0;
@@ -40,7 +43,7 @@ I2C_SLAVE gyro; // Gyroscope I2C object
 int16_t GetDegrees() {
   //while(xSemaphoreTake(gyroSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
   //return (int16_t)(gyroAngle * 9.0); // This scale factor gets it to the angle in degrees in integer
-  return (int16_t)(gyroAngle);
+  return (int16_t)(gyroAngle / 2.0);
   //xSemaphoreGive(gyroSemaphore); // Release the semaphore 
 }
 
@@ -72,13 +75,34 @@ void GyroSetup() {
   //Serial.println(id);  
 }
 
+// Setup the tasks
+void taskSetup() {
+  // Create tasks   
+  xTaskCreate(
+    TaskGyro, // task function
+    (const portCHAR *)"Gyro", // task name string
+    120, // stack size
+    NULL, // nothing
+    0, // Priority, 0 is lowest
+    NULL); // nothing               
+}
+
 void setup() {
   Serial.begin(9600);
   GyroSetup();
+  taskSetup();
 
 }
 
-void loop() {
+void loop() {}
+
+// task code
+void TaskGyro(void *pvParameters) {
+  (void) pvParameters;
+   // Task setup here (like set a pin mode)
+   // Task loop here
+   while(1) { /* begin task loop */
+    
     uint8_t xhi, xlo, ylo, yhi, zlo, zhi;
     uint8_t out[6];
     float gyroValue = 0;
@@ -96,7 +120,6 @@ void loop() {
         gyroAngle -= 0.01;        
       } 
     //xSemaphoreGive(gyroSemaphore); // Release the semaphore 
-
     Serial.print(GetDegrees());
     //Serial.print(gyroAngle);
     //Serial.print(", ");
@@ -106,6 +129,7 @@ void loop() {
     //Serial.print(", ");
     //Serial.println(zhi);
     Serial.println();
-    delay(10);
-
+    vTaskDelay(10 / portTICK_PERIOD_MS); // Schedule to run every 250ms, may need to lower this if there is a noticable pause in between switching the other tasks
+   }
 }
+
