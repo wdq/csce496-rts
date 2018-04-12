@@ -1,6 +1,8 @@
 #include <Arduino_FreeRTOS.h>
 #include "RingoHardware.h"
 #include <Adafruit_NeoPixel.h>
+#include <semphr.h>
+#include <projdefs.h>
 
 #define Light_Bus_BTN1 7 //for 6 neo pixel RGB
 #define NUM_PIXELS 6
@@ -18,6 +20,15 @@
 
 #define TURN_ANGLE    88 // 87 sometimes seems to work better, other times 88
 #define CYCLES_SINCE_CORRECTION_THRESHOLD  100
+
+// Semaphores
+SemaphoreHandle_t ledSemaphore; // Create an available semaphore for using LED hardware
+SemaphoreHandle_t motorSemaphore; // Create an available semaphore for using motor hardware`
+
+void semaphoreSetup() {
+  vSemaphoreCreateBinary(ledSemaphore);
+  vSemaphoreCreateBinary(motorSemaphore);
+}
 
 // Some global variables
 bool isTurning = false; // These first two are used to keep track of if we're going straight or turning, defaults to straight.
@@ -56,38 +67,42 @@ Adafruit_NeoPixel myPixels = Adafruit_NeoPixel(NUM_PIXELS, Light_Bus_BTN1, NEO_G
 
 // Helper functions
 void MySetupPixels() {
+  while(xSemaphoreTake(ledSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
   // Use lights
   pinMode(Light_Bus_BTN1,OUTPUT);
   digitalWrite(Light_Bus_BTN1, LOW); 
+  xSemaphoreGive(ledSemaphore); // Release the semaphore 
 }
 
 // Is reentrant, hardware access guarded by semaphore
 void MySetPixelRGB(int Pixel, int Red, int Green, int Blue){
-  //while(xSemaphoreTake(ledSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
+  while(xSemaphoreTake(ledSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
   myPixels.setPixelColor(Pixel, myPixels.Color(Red,Green,Blue));
-  //xSemaphoreGive(ledSemaphore); // Release the semaphore 
+  xSemaphoreGive(ledSemaphore); // Release the semaphore 
   
 }
 
 // Is reentrant, hardware access guarded by semaphore
 void MyRefreshPixels(){
-  //while(xSemaphoreTake(ledSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
+  while(xSemaphoreTake(ledSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
   myPixels.show();  
-  //xSemaphoreGive(ledSemaphore); // Release the semaphore 
+  xSemaphoreGive(ledSemaphore); // Release the semaphore 
 }
 
 void MySetupMotors() {
+  while(xSemaphoreTake(motorSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
   // Motors begin
   pinMode(MotorDirection_Left, OUTPUT);
   pinMode(MotorDirection_Right, OUTPUT);
   analogWrite(MotorDrive_Left,0);
   analogWrite(MotorDrive_Right,0); 
+  xSemaphoreGive(motorSemaphore); // Release the semaphore 
 }
 
 // Motor control function from Ringo.
 // Is reentrant, hardware access guarded by semaphore
 void MyMotors(int16_t LeftMotor, int16_t RightMotor) {
-  //while(xSemaphoreTake(motorSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
+  while(xSemaphoreTake(motorSemaphore, (TickType_t) 10) == pdFALSE) {} // Wait on semaphore
   // Had some logic to bound the speeds to the min/max.
   // I removed this since not needed since I know the bounds.
   // Also got rid of the use of the global motor speed variables.
@@ -104,7 +119,7 @@ void MyMotors(int16_t LeftMotor, int16_t RightMotor) {
     
   analogWrite(MotorDrive_Left,abs(LeftMotor));
   analogWrite(MotorDrive_Right,abs(RightMotor));
-  //xSemaphoreGive(motorSemaphore); // Release the semaphore 
+  xSemaphoreGive(motorSemaphore); // Release the semaphore 
 }
 
 // Define tasks
@@ -176,6 +191,7 @@ void taskSetup() {
 // First run code
 void setup(){  
   delay(2000); // Delay so that my hand can move away before gyro calibrates
+  semaphoreSetup();
   ringoSetup(); // Setup ringo stuff
   //Serial.begin(9600); // For debugging
   //Serial.println("Setup");  
@@ -245,6 +261,11 @@ void TaskDriveStraight(void *pvParameters) {
       SimpleGyroNavigation(); // Pull sensors
       int16_t setHeading = directionDataAngle;
       while(isDrivingStraight) { /* begin driving straight loop */
+        if(isAvoidingObstacle) {
+          cyclesSinceCorrectionLeft = 0;
+          cyclesSinceCorrectionRight = 0;
+          cyclesSinceCorrectionStraight = 0;          
+        }
         SimpleGyroNavigation();  // Pull sensors
         int16_t currentHeading = GetDegrees();
         int16_t output = CalculatePID(setHeading, currentHeading, &pid); // Get control output
@@ -331,8 +352,8 @@ void TaskControl(void *pvParameters) {
       SimpleGyroNavigation();  // Pull sensors
       int16_t currentHeading = GetDegrees();      
       // todo: might want to back up too
-      MyMotors(-100, -100);
-      vTaskDelay(250 / portTICK_PERIOD_MS);
+      //MyMotors(-100, -100);
+      //vTaskDelay(250 / portTICK_PERIOD_MS);
       MyMotors(0, 0);
       directions[0] = (directionData){.angle=currentHeading+90, .distance=0, .isTurn=true}; // turn 90 degrees
       directions[1] = (directionData){.angle=currentHeading+90, .distance=25, .isTurn=false}; // straight 25
@@ -362,7 +383,7 @@ void TaskControl(void *pvParameters) {
       directionIndex++;
     }
     
-    vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms, may need to lower this if there is a noticable pause in between switching the other tasks
+    vTaskDelay(20 / portTICK_PERIOD_MS); // Schedule to run every 20ms, may need to lower this if there is a noticable pause in between switching the other tasks
    }
 }
 
