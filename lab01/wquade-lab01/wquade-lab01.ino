@@ -32,15 +32,11 @@ typedef struct {
   bool isTurn;
 } directionData;
 
-// This is used in the control task to do maneuvers
-int directionIndex = 0;
 int16_t directionDataAngle;
 uint8_t directionDataDistance;
 directionData directions[8];
 
-// These are for the drive straight task.
-uint8_t straightLoopCounter = 0;
-bool straightPush = true;
+
 
 // Define tasks
 void TaskTurn(void *pvParameters); // Turn
@@ -86,7 +82,7 @@ void taskSetup() {
     (const portCHAR *)"Turn", // task name string
     95, // stack size
     NULL, // nothing
-    1, // Priority, 0 is lowest
+    0, // Priority, 0 is lowest
     NULL); // nothing
     
   xTaskCreate(
@@ -94,7 +90,7 @@ void taskSetup() {
     (const portCHAR *)"DriveStraight", // task name string
     110, // stack size
     NULL, // nothing
-    0, // Priority, 0 is lowest
+    1, // Priority, 0 is lowest
     NULL); // nothing   
     
   xTaskCreate(
@@ -129,32 +125,35 @@ void TaskTurn(void *pvParameters) {
       SetPixelRGB( 4, 255, 0, 0); // Set the lights to red
       SetPixelRGB( 5, 255, 0, 0);
       RefreshPixels();
-      PID pid = (PID){.kp=3, .ki=0, .kd=100, .integral=0, .error=0, .dt=30, .minimum=-90, .maximum=90}; // setup the PID controller
+      PID pid = (PID){.kp=3, .ki=0, .kd=100, .integral=0, .error=0, .dt=25, .minimum=-90, .maximum=90}; // setup the PID controller
       Motors(0,0); // Make sure the motors have stopped before doing anything (todo: maybe a small delay?)
-      int16_t setHeading = directionDataAngle;
-      
+      //ZeroNavigation();
       SimpleGyroNavigation(); // Pull sensors
-      int16_t currentHeading = GetDegrees();
-      if(abs(abs(setHeading) - abs(currentHeading)) == 0) { // If we have reached set point, stop.
-        Motors(0,0);
-        isTurning = false; // Change modes
-        SetPixelRGB( 0, 0, 255, 0);
-        SetPixelRGB( 4, 0, 0, 0);
-        SetPixelRGB( 5, 0, 0, 0);
-        RefreshPixels();
-        return; // Leave
-      }
-      int16_t output = CalculatePID(setHeading, currentHeading, &pid); // Calculate the PID control value
-      // I added a 12 offset to the PID output value, otherwise finishing the turn wouldn't happen since the motors would run at a speed that's too slow to turn.
-      if(output > 0) { // Need to move right
-        output = output + 12;
-      } else if(output < 0) { // Need to move left
-        output = output - 12;
-      }
-      Motors((int)output,-(int)output); // Drive motors with PID output value
+      int16_t setHeading = directionDataAngle;
+      while(isTurning) { /* begin turning 90 degrees loop */
+        SimpleGyroNavigation(); // Pull sensors
+        int16_t currentHeading = GetDegrees();
+        if(abs(abs(setHeading) - abs(currentHeading)) == 0) { // If we have reached set point, stop.
+          Motors(0,0);
+          isTurning = false; // Change modes
+          SetPixelRGB( 4, 0, 0, 0);
+          SetPixelRGB( 5, 0, 0, 0);
+          RefreshPixels();
+          break; // Leave
+        }
+        int16_t output = CalculatePID(setHeading, currentHeading, &pid); // Calculate the PID control value
+        // I added a 12 offset to the PID output value, otherwise finishing the turn wouldn't happen since the motors would run at a speed that's too slow to turn.
+        if(output > 0) { // Need to move right
+          output = output + 12;
+        } else if(output < 0) { // Need to move left
+          output = output - 12;
+        }
+        Motors((int)output,-(int)output); // Drive motors with PID output value
   
+        vTaskDelay(25 / portTICK_PERIOD_MS); // Drive the motors at the control value for 25ms, before running the control loop again
+      } /* end turning 90 degrees loop */
     } /* end if turning 90 degrees */
-    vTaskDelay(25 / portTICK_PERIOD_MS); // Schedule to run every 25ms (this runs when the task is idle, not turning)
+    vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms (this runs when the task is idle, not turning)
    } /* end task loop */
 }
 
@@ -169,28 +168,17 @@ void TaskDriveStraight(void *pvParameters) {
       SetPixelRGB( 4, 0, 0, 255); // set the lights to green
       SetPixelRGB( 5, 0, 0, 255);
       RefreshPixels();
-      PID pid = (PID){.kp=50, .ki=0, .kd=0, .integral=0, .error=0, .dt=30, .minimum=-100, .maximum=100}; // setup the PID controller      
+      PID pid = (PID){.kp=50, .ki=0, .kd=0, .integral=0, .error=0, .dt=50, .minimum=-100, .maximum=100}; // setup the PID controller      
       Motors(0,0); // Make sure the motors have stopped before doing anything (todo: maybe a small delay?)
+      //ZeroNavigation();
+      SimpleGyroNavigation(); // Pull sensors
       int16_t setHeading = directionDataAngle;
-      
-      SimpleGyroNavigation();  // Pull sensors
-      int16_t currentHeading = GetDegrees();
-      int16_t output = CalculatePID(setHeading, currentHeading, &pid); // Get control output
-      int16_t headingDiff = currentHeading - setHeading; // Figure out if we need to move left or right, and control motors based on that
-      // Runs the motors for 20ms at the control output value to drive towards the set point.
-      if(straightPush) {
-        straightPush = false;
-        straightLoopCounter++; // Keep track of the number of straight driving runs, and change modes back to a turn after 80
-        if(headingDiff == 0) {
-          cyclesSinceCorrectionStraight = 0;
-          cyclesSinceCorrectionLeft++;
-          cyclesSinceCorrectionRight++;
-          SetPixelRGB( 3, 0, 0, 255);
-          RefreshPixels();
-        }
-        Motors(100, 100);  // Drive the motor straight for 30ms to progress forward. The control part above will correct any errors
-      } else {
-        straightPush = true;
+      while(isDrivingStraight) { /* begin driving straight loop */
+        SimpleGyroNavigation();  // Pull sensors
+        int16_t currentHeading = GetDegrees();
+        int16_t output = CalculatePID(setHeading, currentHeading, &pid); // Get control output
+        int16_t headingDiff = currentHeading - setHeading; // Figure out if we need to move left or right, and control motors based on that
+        // Runs the motors for 20ms at the control output value to drive towards the set point.
         if(headingDiff > 0) { // Left
           Motors(0,(int)abs(output));
           cyclesSinceCorrectionStraight++;
@@ -198,7 +186,7 @@ void TaskDriveStraight(void *pvParameters) {
           cyclesSinceCorrectionRight++;
           SetPixelRGB( 3, 255, 0, 0);
           RefreshPixels();   
-          //vTaskDelay(30 / portTICK_PERIOD_MS);    
+          vTaskDelay(30 / portTICK_PERIOD_MS);    
         } else if(headingDiff < 0) { // Right
           Motors((int)abs(output), 0); 
           cyclesSinceCorrectionStraight++;
@@ -206,35 +194,41 @@ void TaskDriveStraight(void *pvParameters) {
           cyclesSinceCorrectionRight = 0;
           SetPixelRGB( 3, 0, 255, 0);
           RefreshPixels();  
-          //vTaskDelay(30 / portTICK_PERIOD_MS);
+          vTaskDelay(30 / portTICK_PERIOD_MS);
         } else {
-          Motors(100, 100);
           cyclesSinceCorrectionStraight = 0;
           cyclesSinceCorrectionLeft++;
           cyclesSinceCorrectionRight++;
           SetPixelRGB( 3, 0, 0, 255);
           RefreshPixels();
         }
-      }
+        isObstacle = checkForObstacle();
 
-      isObstacle = checkForObstacle();
-
-      // This can be used to control how long the sides of the square/rectangle are, at least sort of, it isn't quite perfect.
-      // Originally I did a fixed run time before changing modes (in a third task), but had some issues with inconsistency from it sometimes being
-      // stopped when it was turning right or left to correct the straight line driving, this guarantees that it always stops at the same spot, 
-      // and doesn't require that I disable interrupts or anything. 
-      SetPixelRGB( 4, 0, straightLoopCounter, 0);
-      if(straightLoopCounter == directionDataDistance) {
-        straightLoopCounter = 0;
-        Motors(0,0);
-        SetPixelRGB( 3, 0, 0, 0);
-        SetPixelRGB( 4, 0, 0, 0);
-        SetPixelRGB( 5, 0, 0, 0);
-        RefreshPixels();
-        isDrivingStraight = false; // Change modes
-      }
+        Motors(100, 100);  // Drive the motor straight for 30ms to progress forward. The control part above will correct any errors
+        straightLoopCounter++; // Keep track of the number of straight driving runs, and change modes back to a turn after 80
+        // This can be used to control how long the sides of the square/rectangle are, at least sort of, it isn't quite perfect.
+        // Originally I did a fixed run time before changing modes (in a third task), but had some issues with inconsistency from it sometimes being
+        // stopped when it was turning right or left to correct the straight line driving, this guarantees that it always stops at the same spot, 
+        // and doesn't require that I disable interrupts or anything. 
+        SetPixelRGB( 4, 0, straightLoopCounter, 0);
+        if(straightLoopCounter == directionDataDistance) {
+          straightLoopCounter = 0;
+          //cyclesSinceCorrectionStraight = 0;
+          //cyclesSinceCorrectionLeft = 0;
+          //cyclesSinceCorrectionRight = 0;
+          Motors(0,0);
+          SetPixelRGB( 3, 0, 0, 0);
+          SetPixelRGB( 4, 0, 0, 0);
+          SetPixelRGB( 5, 0, 0, 0);
+          RefreshPixels();
+          isDrivingStraight = false; // Change modes
+        }
+        
+  
+        vTaskDelay(20 / portTICK_PERIOD_MS); // Drive the motors straight for 30ms
+      } /* end driving straight loop */
     } /* end if driving straight */
-    vTaskDelay(30 / portTICK_PERIOD_MS); // Schedule to run every 30ms (this runs when the task is idle, not going straight)
+    vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms (this runs when the task is idle, not going straight)
    } /* end task loop */
 }
 
@@ -245,9 +239,13 @@ void TaskControl(void *pvParameters) {
    // Task loop here
    int directionIndex = 0;
    while(1) { /* begin task loop */
+    //SimpleGyroNavigation(); 
+    //int16_t currentHeading = GetDegrees();
+    //Serial.println(currentHeading);
+    //vTaskDelay(100 / portTICK_PERIOD_MS); // Schedule to run every 100ms
 
-    if(isDrivingStraight || isTurning) { // Wait for the straight or turn task to do its thing
-      return; // Nothing to do if the other tasks are doing their thing  
+    while(isDrivingStraight || isTurning) { // Wait for the straight or turn task to do its thing
+      vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms      
     }
 
     if(!isObstacle && !isAvoidingObstacle) { // If no obstacle, go straight (to reach goal)
@@ -256,31 +254,29 @@ void TaskControl(void *pvParameters) {
       directionDataDistance = 50;
       isTurning = false;
       isDrivingStraight = true;
-    } else if(isObstacle && !isAvoidingObstacle) { // Try to go around obstacle.
+    } else if(!isAvoidingObstacle) { // Try to go around obstacle.
       //Serial.println("Setup avoidance");
       SimpleGyroNavigation();  // Pull sensors
       int16_t currentHeading = GetDegrees();      
       // todo: might want to back up too
-      //Motors(-100, -100);
-      //vTaskDelay(250 / portTICK_PERIOD_MS);
+      Motors(-100, -100);
+      vTaskDelay(250 / portTICK_PERIOD_MS);
       Motors(0, 0);
       directions[0] = (directionData){.angle=currentHeading+90, .distance=0, .isTurn=true}; // turn 90 degrees
-      directions[1] = (directionData){.angle=currentHeading+90, .distance=50, .isTurn=false}; // straight 50
+      directions[1] = (directionData){.angle=currentHeading+90, .distance=25, .isTurn=false}; // straight 25
       directions[2] = (directionData){.angle=currentHeading, .distance=0, .isTurn=true}; // turn -90
       directions[3] = (directionData){.angle=currentHeading, .distance=50, .isTurn=false}; // straight 50
       directions[4] = (directionData){.angle=currentHeading-90, .distance=0, .isTurn=true}; // turn -90
-      directions[5] = (directionData){.angle=currentHeading-90, .distance=50, .isTurn=false}; // straight 50
+      directions[5] = (directionData){.angle=currentHeading-90, .distance=25, .isTurn=false}; // straight 25
       directions[6] = (directionData){.angle=currentHeading, .distance=0, .isTurn=true}; // turn 90 degrees
       directions[7] = (directionData){.angle=0, .distance=0, .isTurn=false}; // stop      
       directionIndex = 0;
       isAvoidingObstacle = true;
-      Motors(-100, -100); // Back up
-    } 
-    
+    }
+
     if(isAvoidingObstacle) {
       //Serial.println("Avoiding");
       // Get the next direction
-      Motors(0, 0);
       directionDataAngle = directions[directionIndex].angle;
       directionDataDistance = directions[directionIndex].distance;
       isTurning = directions[directionIndex].isTurn;
@@ -292,13 +288,9 @@ void TaskControl(void *pvParameters) {
         isDrivingStraight = false;
       }
       directionIndex++;
-      SetPixelRGB( 0, 0, 0, 0);
-      RefreshPixels();
     }
-
-
     
-    vTaskDelay(20 / portTICK_PERIOD_MS); // Schedule to run every 20ms
+    vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms, may need to lower this if there is a noticable pause in between switching the other tasks
    }
 }
 
