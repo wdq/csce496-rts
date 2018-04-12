@@ -139,7 +139,7 @@ void ringoSetup() {
   //PlayStartChirp();       //Play startup chirp and blink eyes
   //NavigationBegin();
   //SimpleGyroNavigation(); 
-  SwitchMotorsToSerial(); //Call "SwitchMotorsToSerial()" before using Serial.print functions as motors & serial share a line
+  //SwitchMotorsToSerial(); //Call "SwitchMotorsToSerial()" before using Serial.print functions as motors & serial share a line
   RestartTimer();  
   NavigationBegin();  
 }

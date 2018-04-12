@@ -107,7 +107,6 @@ char PauseNavigationInterrupt=1;
 char NavigationOn=0;
 int32_t count;
 
-extern volatile char IRReceiving;
 int nav_data[3];//made global so compiler doesn't optimize it out of code
 int nav_accel[3];
 int nav_data3[3];
@@ -154,11 +153,8 @@ void SimpleGyroNavigation(void){//Ver. 1.0, Dustin Soodak
   //int nav_data[3];//Compiler error:  when nav_data[] local, it was not actually reserving space for this since it isn't explicitly set (is set by pointers)
   char i,j;
   ConvertNavigationCoordinates(0);
-  if(IRReceiving){
-    if(IsIRDone())
-     IRReceiving=0; 
-  }
-  if(!PauseNavigationInterrupt && !IRReceiving){
+
+  if(!PauseNavigationInterrupt){
     
     //Get Gyroscope data
     n=GyroBufferSize();
@@ -212,88 +208,6 @@ void ConvertNavigationCoordinates(char NewXYMode){//Ver. 1.0, Dustin Soodak
 }
 
 
-void SimpleNavigation(void){//Ver. 1.0, Dustin Soodak
-  //can't be put in interrupt since I2C functions use an interrupt(update: new I2C functions don't use an interrupt)
-  char i,j,n,gn,an;
-  //int nav_data[3];//Compiler error:  when nav_data[] local, it was not actually reserving space for this since it isn't explicitly set (is set by pointers)
-  int32_t AccelPositionNewDat[3]={0,0,0};
-  int32_t AccelVelocityNewDat[3]={0,0,0};
-  int32_t GyroPositionNewDat[3]={0,0,0};
-  AverGyroVelocity=0;
-  count++;
-  ConvertNavigationCoordinates(0);
-    
-  
-  if(IRReceiving){
-    if(IsIRDone())
-     IRReceiving=0; 
-  }
-  if(!PauseNavigationInterrupt && !IRReceiving){
-        
-    //Get Gyroscope data
-    gn=GyroBufferSize();
-    
-    for(i=0;i<gn;i++){
-      GyroGetAxes(nav_data);
-      
-      for(j=1;j<3;j++){//just y,z axis      
-        GyroVelocity[j]=((int32_t)nav_data[j])-GyroZeroes[j];
-        GyroPosition[j]+=(GyroVelocity[j]);
-      }
-      //UpdateGyroEdgeDetection(GyroVelocity[1]);//works but already too late by the time edge is detected
-      
-      AverGyroVelocity+=abs(GyroVelocity[2]);
-            
-    }
-    //get current rotational velocity for x & y axes
-    for(j=0;j<2;j++){
-      GyroVelocity[j]=((int32_t)nav_data[j])-GyroZeroes[j];
-    }
-    AverGyroVelocity/=gn;
-    if(gn>=31)
-      GyroFifoOverflow=1;
-    
-    //Get Accelerometer data
-    an=AccelBufferSize();
-    for(i=0;i<an;i++){
-      AccelGetAxes(nav_accel);
-      //digitalWrite(Light_Bus_BTN1,0);
-      /*
-      //less efficient but easier to understand:
-      for(j=0;j<2;j++){   //just x and y axis
-        AccelAcceleration[j]=((int32_t)nav_accel[j])-AccelZeroes[j];  
-        AccelVelocity[j]+=AccelAcceleration[j];        
-        AccelPosition[j]+=AccelVelocity[j]/400;//so in range and same as velocity
-      }      
-      */
-      //more efficient:
-      for(j=0;j<3;j++)//get rav values for all 3 in case another function wants to reference them
-        AccelAcceleration[j]=((int32_t)nav_accel[j])-AccelZeroes[j];
-      for(j=1;j<2;j++){   //just y axis
-        //AccelAcceleration[1]+=(10*(AverGyroVelocity))/8;//assuming that it always rotates about the same point (around where wheels are), experimentally putting this in
-        AccelVelocity[j]+=AccelAcceleration[j];        
-        AccelPositionNewDat[j]+=AccelVelocity[j];//so in range and same as velocity
-      }
-      if(i==an-1){
-        for(j=1;j<2;j++){//just y axis
-          AccelPosition[j]+=AccelPositionNewDat[j]/400;
-        }
-      }      
-    }//end for(i=0;i<n;i++
-     //get current acceleration for x,y, and z axes
-    if(an>0){
-      for(j=0;j<3;j++){
-        AccelAcceleration[j]=((int32_t)nav_accel[j])-AccelZeroes[j];
-      }
-    }
-    if(an>=31)
-      AccelFifoOverflow=1;
-  }
-  
-  
-}//end NavigationHandler()
-
-
 #ifdef INT_VER
 const int SinFunctionTable[]={0,286,572,857,1143,1428,1713,1997,2280,2563,2845,3126,3406,3686,3964,4240,4516,4790,5063,5334,5604,5872,6138,6402,6664,6924,7182,7438,7692,7943,8192,8438,8682,8923,9162,9397,9630,9860,10087,10311,10531,10749,10963,11174,11381,11585,11786,11982,12176,12365,12551,12733,12911,13085,13255,13421,13583,13741,13894,14044,14189,14330,14466,14598,14726,14849,14968,15082,15191,15296,15396,15491,15582,15668,15749,15826,15897,15964,16026,16083,16135,16182,16225,16262,16294,16322,16344,16362,16374,16382,16384};
 int SineFunction(int degr){//Ver. 1.0, Dustin Soodak
@@ -335,192 +249,6 @@ extern int GyroVelocityZPrev;//(defined below)
 int32_t N_accelx,N_accely;//made global so compiler doesn't "optimize" them out.
 
 
-//Notes on NavigationXY()
-//
-//This assumes flat level surface and no tilting forwards & backwards.
-//Recently added code to account (in GetPositionX/Y() functions) for 
-//fact that accelerometer is actually 3cm in front of the rotation point
-//of the robot. 
-//
-//Possible improvements:
-//
-//I created a couple of versions of NavigationXYTilt() which were supposed to
-//take forward/backward tilt into account (since gravity is a much stronger force
-//than the motors can produce, even a degree or 2 tilt can make a huge difference)
-//but the drift of x-axis of the gyroscope ended up being too big to simply plug
-//its value into the "degrees of tilt" variable. Since the accelerometer is in 
-//front it might also experience negative acceleration from the robot vibrating
-//along its x-axis (though I haven't measured this directly so don't know if
-//it is actually significant).
-//
-//Another possible improvement is to take into account that this is a wheeled
-//vehicle and not a hovercraft. If the robot is swerving slightly to the 
-//right & left as it travels, then it should be possible to correct for
-//drift in calculated velocity since the sideways force exerted as it turns
-//should be proportional to its forward velocity. Of course, the first step
-//must be to calculate what the sideways acceleration is at a point 30mm 
-//behind the accelerometer(I currently only have POSITION corrected for in
-//this way...acceleration might be more complicated and has to be done real-time). 
-//
-//If you do plan on making functions that directly access gyroscope and
-//accelerometer functions, keep in mind that the vibrations from movement
-//are much larger than the general linear or rotational acceleration of the
-//robot as a whole. Also: the functions in the "Recorded Data" section of
-//RingoHardware.h might be useful.
-//Dustin Soodak
-//
-
-void NavigationXY(int GyroSensitivity, int AccelSensitivity){  //Ver. 1.0, Dustin Soodak
-  //Note: (50,800) are good input values
-  signed char i,j,n,gn,an,m;
-  int32_t N_accelxraw,N_accelyraw;//32 bit since zeroes being subtracted might make a negative value out of range
-  static int32_t N_accelxrawprev,N_accelyrawprev;//,N_gyrorawprev;
-    
-  #ifdef FLOAT_VER
-  float Theta,CosTheta,SinTheta;
-  #endif
-  #ifdef INT_VER
-  //int N_accelxdif,N_accelydif,N_gyrodif;
-  //int32_t N_accelx,N_accely;
-  int degr;
-  int CosDegr,SinDegr;
-  #endif
-  ConvertNavigationCoordinates(1);
-  count++;
-  if(IRReceiving){
-    if(IsIRDone())
-     IRReceiving=0; 
-  }
-  if(!PauseNavigationInterrupt && !IRReceiving){
-        
-    gn=GyroBufferSize();              //Reads how many buffer positions are full in the Gyro (the Gyro has 32 buffer 
-                                      //positions/readings and must be read prior to reaching 32 to avoid inaccurate calculation)
-    an=AccelBufferSize();             //Reads how many buffer positions are full in the Accelerometer (the Accel has 32 buffer
-                                      //positions/readings and must be read prior to reaching 32 to avoid inaccurate calculation)
-    
-    if(an>gn)                         //Because the accel reads 400 Hz and gryo reads 380 Hz, this section keeps them in sync by
-      m=gn/(an-gn);                   //occasionally averaging 2 consecutive readings from the accel
-    else
-      m=99;  
-    //digitalWrite(Light_Bus_BTN1,0);                               //<-- uncomment to spit values out the serial debug
-    for(i=0;i<gn;i++){      
-      GyroGetAxes(nav_data);            //380 hz       
-      if(an)//generally, an>=gn, unless only one reading has been received
-        AccelGetAxes(nav_accel);          //400 hz
-      //otherwise, use last reading
-      //Serial.print(i);Serial.print(" ");Serial.print(gn);Serial.print(an);Serial.println(m,DEC);    //<-- uncomment to spit values out the serial debug
-      if(((i+1)%m)==0){                 //to keep buffers in sync
-         AccelGetAxes(nav_data3);
-         for(j=0;j<3;j++){
-            nav_accel[j]=(((int32_t)nav_accel[j])+nav_data3[j])/2;
-         }
-      }
-      
-      
-      N_accelxrawprev=N_accelxraw;//Used in code that makes sure sensor drift or small 
-      N_accelyrawprev=N_accelyraw;//changes in orientation don't make it think its moving.
-      N_accelxraw=((int32_t)nav_accel[0])-AccelZeroes[0];//non-rotated value
-      N_accelyraw=((int32_t)nav_accel[1])-AccelZeroes[1];//non-rotated value
-      
-      GyroVelocity[2]=((nav_data[2]-GyroZeroes[2])); 
-      
-      //UpdateGyroEdgeDetection(nav_data[1]-GyroZeroes[1]);//works but already too late by the time edge is detected
-      #ifdef INT_VER                                               //INT_VER should always be used.  It takes about 300 uS to run as it does tricks
-                                                                   //to do the math using integer values rather than float values.  The float version
-                                                                   //takes about 1000 uS to run.
-      //see N_accelxYGData tab of Ringo spreadsheet
-      //average .7276ms with all integer operations except for theta/sin/cos
-      //average .3272ms with lookup array trig functions SinFunction() and CosFunction()
-      //RestartTimer();for(i=0;i<100;i++){                         //<-- uncomment this line and "Serial.println(GetTime(),DEC);" below to measure time to run this function
-       
-      GyroPosition[2]+=GyroVelocity[2];
-      GyroAccelerationZ=GyroVelocity[2]-GyroVelocityZPrev;
-      GyroVelocityZPrev=GyroVelocity[2];
-      degr=(((float)GyroPosition[2])*(0.0000355*2000/380));//proper direction but pi/2 offset
-      SinDegr=SineFunction(degr);//integer trig functions scaled by 0x4000
-      CosDegr=CosineFunction(degr);//integer trig functions scaled by 0x4000
-      
-      N_accelx=(N_accelxraw*CosDegr-N_accelyraw*SinDegr)/0x4000;//rotated value
-      N_accely=(N_accelyraw*CosDegr+N_accelxraw*SinDegr)/0x4000;//rotated value
-      
-      //AccelDistance+=sqrt(((AccelVelocity[0]/380*AccelVelocity[0]/380)+(AccelVelocity[1]/380*AccelVelocity[1]/380))/380);
-      //Serial.print(nav_accel[0]);Serial.print("\t");Serial.print(nav_accel[1]);Serial.print("\t");Serial.println(nav_data[2]);//remember: motors must be switched to serial to use this
-      //}  Serial.println(GetTime(),DEC);  //<-- uncomment this line and "RestartTimer();for(i=0;i<100;i++){" above to measure time to run function & echo out serial
-      #endif//end #ifdef INT_VER 
-      //
-      //
-      #ifdef FLOAT_VER  //kep around for reference so INT_VER is easier to understand
-      //average: .973ms
-      //RestartTimer();for(i=0;i<100;i++){     
-         
-      GyroPosition[2]+=((float)(GyroVelocity[2]))/380;//GyroRawToDegreesMult
-      Theta=GyroPosition[2]*((0.0000355*2000)*3.14159/180);//see N_accelxYGData tab of Ringo spreadsheet
-      SinTheta=sin(Theta);
-      CosTheta=cos(Theta);      
-      
-      N_accelx=(N_accelxraw*CosTheta-N_accelyraw*SinTheta);//rotated value
-      N_accely=(N_accelyraw*CosTheta+N_accelxraw*SinTheta);//rotated value
-      
-      //}Serial.println(GetTime(),DEC);
-      #endif//end #ifdef FLOAT_VER
-      
-      if(abs(N_accelxraw)>AccelSensitivity || abs(N_accelyraw)>AccelSensitivity || abs(GyroVelocity[2])>GyroSensitivity){//is moving (should catch this immediately)      
-        if(abs(N_accelxrawprev-N_accelxraw)>AccelSensitivity || abs(N_accelyrawprev-N_accelyraw)>AccelSensitivity){
-          if(IsStationary){     
-            NonStationaryValue=(abs(N_accelxraw)>AccelSensitivity?N_accelxraw:abs(N_accelyraw)>AccelSensitivity?N_accelyraw:GyroVelocity[2]);
-            NonStationaryAxis=(abs(N_accelxraw)>AccelSensitivity?0x1:abs(N_accelyraw)>AccelSensitivity?0x2:0x4);
-          }//what if gyro but not accel?
-          IsStationaryCount=0;
-          IsStationary=0;  
-      }
-      }
-      else{//doesn't appear to be changing its velocity or orientation very much
-        if(!IsStationary){
-          if(IsStationaryCount<10){
-            IsStationaryCount++;
-          }
-          else{//definitely not moving if still of 10 consecutive readings
-            IsStationary=1;
-            AccelVelocity[0]=0;
-            AccelVelocity[1]=0; 
-          }
-        }
-      }
-      if(IsStationary==0){
-        AccelVelocity[0]+=N_accelx;
-        AccelVelocity[1]+=N_accely; 
-        AccelPosition[0]+=AccelVelocity[0];            
-        AccelPosition[1]+=AccelVelocity[1];
-        //Note: theta has a Pi/2 offset
-        #ifdef INT_VER
-        AccelPositionXOffset=-((int32_t)ACCEL_DIST)*SinDegr/0x4000;
-        AccelPositionYOffset=((int32_t)ACCEL_DIST)*CosDegr/0x4000;
-        #endif
-        #ifdef FLOAT_VER
-        AccelPositionXOffset=-SinTheta*ACCEL_DIST;
-        AccelPositionYOffset=CosTheta*ACCEL_DIST;
-        #endif
-      }
-      
-    }//end for(i=0;i<gn;i++)
-   
-    if(an>0){ 
-      #ifdef INT_VER     
-      AccelAcceleration[0]=N_accelx;      
-      AccelAcceleration[1]=N_accely;   
-      #endif
-      AccelAcceleration[2]=((int32_t)nav_accel[2])-AccelZeroes[2];
-    }
-    
-    //digitalWrite(Light_Bus_BTN1,1);
-    if(an>=31)
-      AccelFifoOverflow=1;
-    if(gn>=31)
-      GyroFifoOverflow=1;  
-      
-  }//end if(!PauseNavigationInterrupt && !IRReceiving)
-  
-}//end NavigationXY()
 
 // calibrates out stationary drift in sensors. MUST BE RUN WHEN RINGO IS PERFECTLY STILL!!
 void CalibrateNavigationSensors(void){//Ver. 1.0, Dustin Soodak
@@ -774,20 +502,6 @@ int GetPositionY(void){//Ver. 1.0, Dustin Soodak
     return ((float)AccelPosition[1])*(-(float)(2*9800)/32768/400);//note: already an extra "/400" in handler to keep in range (400 for 400hz)
 
 }
-         
-void DelayWithSimpleNavigation(int ms){//Ver. 1.0, Dustin Soodak
-  int32_t total=millis()+ms;
-  while(millis()<total){
-    SimpleNavigation();
-  }
-}
-
-void DelayWithNavigation(int ms){//Ver. 1.0, Dustin Soodak
-  int32_t total=millis()+ms;
-  while(millis()<total){
-    NavigationXY(80,800);
-  }
-}
 
 // ***************************************************
 // end Navigation
@@ -934,12 +648,7 @@ void UpdateGyroConversionVars(void){//Ver. 1.0, Dustin Soodak
   GyroRawToSkidMult=GyroRawToDegreesPerSecMult*0.1029;//used in GyroDegreesToStopFromRaw()
 }
 
-float EEPROM_CalMultiplier;
 void GetGyroCalibrationMultiplier(void){//Ver. 1.0, Kevin King   //Gets gyro cal mult from EEPROM if present
-  EEPROM_readAnything(GYRO_CAL_MULT_ADDRESS, EEPROM_CalMultiplier);
-  if((EEPROM_CalMultiplier >= 0.85) && (EEPROM_CalMultiplier <= 1.15)){
-  GyroscopeCalibrationMultiplier=EEPROM_CalMultiplier; //use calibration value if within bounds
-  }
 }
 
 void GyroSetRange(int Range){//Ver. 1.0, Dustin Soodak
@@ -1092,26 +801,6 @@ int GyroDegreesToStop(int DegreesPerSecond){//Ver. 1.0, Dustin Soodak
 // Computation
 // ***************************************************
 
-int MinTurn(int ChangeInDegrees){//Ver. 1.0, Dustin Soodak
-  int degr=ChangeInDegrees;
-  char IsNegative=0;
-  if(degr<0){
-    IsNegative=1;
-    degr=-degr;
-  }
-  if(degr>360)
-      degr=degr%360;
-  if(degr<=180)
-    degr;
-  else
-    -(360-degr);
-  if(IsNegative)
-    degr=-degr;
-  return degr;
-}
-int MinTurnToHeading(int DesiredHeading){//Ver. 1.0, Dustin Soodak
-  return MinTurn(DesiredHeading-GetDegrees())+GetDegrees();
-}
 
 int VectorToDegrees(int x,int y){//Ver. 1.0, Dustin Soodak
   return 90-(int)(atan2(y,x)*180/3.14159265359);

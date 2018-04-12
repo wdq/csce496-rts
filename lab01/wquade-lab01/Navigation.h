@@ -42,8 +42,6 @@ extern void GetGyroCalibrationMultiplier(void); //checks EEPROM for GyroCalibrat
 extern void NavigationBegin(void);
 extern char NavigationOn;
 extern void SimpleGyroNavigation(void);
-extern void SimpleNavigation(void);
-extern void NavigationXY(int GyroSensitivity, int AccelSensitivity);//50,800 are good input values
 //would put in interrupt, but I2C library can't be used in an interrupt and also takes more than 
 //1ms so would interfere with millis() function.
 
@@ -55,8 +53,6 @@ extern void ZeroNavigation(void); //NavigationBegin() does this
 extern void PauseNavigation(void);//call after NavigationBegin() if NavigationHandlerSimple() not being called immediately after
 extern void ResumeNavigation(void);//clears buffers
 extern char NavigationPaused(void);//lets you know if navigation is paused
-extern void DelayWithNavigation(int ms);//like delay(ms) but keeps track of how XY position and orientation changes
-extern void DelayWithSimpleNavigation(int ms);//like delay(ms) but keeps track of how Y position and orientation changes
 
 
 extern int PresentHeading(void);  // returns present heading in positive or negative degress, does not loop at 360
@@ -95,8 +91,6 @@ extern int AccelPositionXOffset,AccelPositionYOffset;
 // Computation (couple of useful functions)
 // ***************************************************
 
-extern int MinTurn(int ChangeInDegrees);//ex: enter a value of 300 degrees and it will return -60
-extern int MinTurnToHeading(int DesiredHeading);//ex: if PresentHeading()=180 degrees, then MinTurnToHeading(-60)=300
 extern int VectorToDegrees(int x,int y);
 
 // ***************************************************
