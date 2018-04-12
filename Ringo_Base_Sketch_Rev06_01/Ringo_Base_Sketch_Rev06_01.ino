@@ -305,6 +305,9 @@ void loop(){
   // 468.75us is 375us + 25%.
   // I'll stick with 500us (0.5ms).
   // This is with the delays refactored.
+  SimpleGyroNavigation();
+  Serial.println((int16_t)GetDegrees());
+  delay(100);
   digitalWrite(13, 0);
   //delay(1);
 
