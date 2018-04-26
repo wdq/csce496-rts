@@ -130,10 +130,11 @@ void TaskTurn(void *pvParameters) {
       //ZeroNavigation();
       SimpleGyroNavigation(); // Pull sensors
       int16_t setHeading = directionDataAngle;
+      uint8_t turnLoopCounter = 0;
       while(isTurning) { /* begin turning 90 degrees loop */
         SimpleGyroNavigation(); // Pull sensors
         int16_t currentHeading = GetDegrees();
-        if(abs(abs(setHeading) - abs(currentHeading)) == 0) { // If we have reached set point, stop.
+        if((abs(abs(setHeading) - abs(currentHeading)) == 0) || turnLoopCounter > 200) { // If we have reached set point, stop.
           Motors(0,0);
           isTurning = false; // Change modes
           SetPixelRGB( 4, 0, 0, 0);
@@ -149,6 +150,7 @@ void TaskTurn(void *pvParameters) {
           output = output - 12;
         }
         Motors((int)output,-(int)output); // Drive motors with PID output value
+        turnLoopCounter++;
   
         vTaskDelay(25 / portTICK_PERIOD_MS); // Drive the motors at the control value for 25ms, before running the control loop again
       } /* end turning 90 degrees loop */
