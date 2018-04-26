@@ -250,7 +250,7 @@ void TaskControl(void *pvParameters) {
 
     if(!isObstacle && !isAvoidingObstacle) { // If no obstacle, go straight (to reach goal)
       //Serial.println("Straight");
-      directionDataAngle = 0;
+      directionDataAngle = 45;
       directionDataDistance = 50;
       isTurning = false;
       isDrivingStraight = true;
@@ -265,7 +265,7 @@ void TaskControl(void *pvParameters) {
       directions[0] = (directionData){.angle=currentHeading+90, .distance=0, .isTurn=true}; // turn 90 degrees
       directions[1] = (directionData){.angle=currentHeading+90, .distance=25, .isTurn=false}; // straight 25
       directions[2] = (directionData){.angle=currentHeading, .distance=0, .isTurn=true}; // turn -90
-      directions[3] = (directionData){.angle=currentHeading, .distance=50, .isTurn=false}; // straight 50
+      directions[3] = (directionData){.angle=currentHeading, .distance=25, .isTurn=false}; // straight 50
       directions[4] = (directionData){.angle=currentHeading-90, .distance=0, .isTurn=true}; // turn -90
       directions[5] = (directionData){.angle=currentHeading-90, .distance=25, .isTurn=false}; // straight 25
       directions[6] = (directionData){.angle=currentHeading, .distance=0, .isTurn=true}; // turn 90 degrees
