@@ -110,9 +110,9 @@ void setup(){
   ringoSetup(); // Setup ringo stuff
 
   SimpleGyroNavigation();  // Pull sensors
-  int16_t currentHeading = GetDegrees();\
+  int16_t currentHeading = GetDegrees();
   directions[0] = (directionData){.angle=currentHeading+90, .distance=0, .isTurn=true}; // turn 90 degrees     
-  directions[1] = (directionData){.angle=currentHeading+90, .distance=65, .isTurn=false}; // straight 100
+  directions[1] = (directionData){.angle=currentHeading+90, .distance=70, .isTurn=false}; // straight 100
   directions[2] = (directionData){.angle=currentHeading, .distance=0, .isTurn=true}; // turn -90
 
   directions[3] = (directionData){.angle=currentHeading, .distance=250, .isTurn=false}; // straight 250
