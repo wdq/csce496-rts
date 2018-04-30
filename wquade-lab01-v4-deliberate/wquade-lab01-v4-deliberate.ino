@@ -83,18 +83,19 @@ void setup(){
   ringoSetup(); // Setup ringo stuff
   
   SimpleGyroNavigation();  // Pull sensors
-  int16_t currentHeading = GetDegrees();     
-  directions[0] = (directionData){.angle=currentHeading, .distance=100, .isTurn=false}; // straight 100
-  directions[1] = (directionData){.angle=currentHeading+90, .distance=0, .isTurn=true}; // turn 90 degrees
-  directions[2] = (directionData){.angle=currentHeading+90, .distance=85, .isTurn=false}; // straight 100
-  directions[3] = (directionData){.angle=currentHeading, .distance=0, .isTurn=true}; // turn -90
+  int16_t currentHeading = GetDegrees();\
+  directions[0] = (directionData){.angle=currentHeading+90, .distance=0, .isTurn=true}; // turn 90 degrees     
+  directions[1] = (directionData){.angle=currentHeading+90, .distance=65, .isTurn=false}; // straight 100
+  directions[2] = (directionData){.angle=currentHeading, .distance=0, .isTurn=true}; // turn -90
 
-  directions[4] = (directionData){.angle=currentHeading, .distance=85, .isTurn=false}; // straight 200
-  directions[5] = (directionData){.angle=currentHeading+60, .distance=0, .isTurn=true}; // turn 60
-  directions[6] = (directionData){.angle=currentHeading+60, .distance=55, .isTurn=false}; // straight 70
-  directions[7] = (directionData){.angle=currentHeading, .distance=0, .isTurn=true}; // turn -60 degrees
-  directions[8] = (directionData){.angle=currentHeading, .distance=100, .isTurn=false}; // straight 50
-  directions[9] = (directionData){.angle=0, .distance=0, .isTurn=false}; // stop  
+  directions[3] = (directionData){.angle=currentHeading, .distance=250, .isTurn=false}; // straight 250
+
+  //directions[4] = (directionData){.angle=currentHeading, .distance=85, .isTurn=false}; // straight 200
+  //directions[5] = (directionData){.angle=currentHeading+60, .distance=0, .isTurn=true}; // turn 60
+  //directions[6] = (directionData){.angle=currentHeading+60, .distance=55, .isTurn=false}; // straight 70
+  //directions[7] = (directionData){.angle=currentHeading, .distance=0, .isTurn=true}; // turn -60 degrees
+  //directions[8] = (directionData){.angle=currentHeading, .distance=100, .isTurn=false}; // straight 50
+  directions[4] = (directionData){.angle=0, .distance=0, .isTurn=false}; // stop  
   
   Serial.begin(9600); // For debugging
   Serial.println("Setup");  
