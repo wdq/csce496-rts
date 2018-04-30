@@ -7,6 +7,7 @@
 // Some global variables
 bool isTurning = false; // These first two are used to keep track of if we're going straight or turning, defaults to straight.
 bool isDrivingStraight = false;
+bool isDeliberate = false;
 
 bool isAvoidingObstacle = false; // Follow the avoidance code if this is true.
 bool isObstacle = false; // Keep track of if there is an obstacle in the way
@@ -34,7 +35,7 @@ typedef struct {
 
 int16_t directionDataAngle;
 uint8_t directionDataDistance;
-directionData directions[8];
+directionData directions[10];
 
 
 
@@ -106,6 +107,23 @@ void taskSetup() {
 void setup(){  
   delay(2000); // Delay so that my hand can move away before gyro calibrates
   ringoSetup(); // Setup ringo stuff
+
+  SimpleGyroNavigation();  // Pull sensors
+  int16_t currentHeading = GetDegrees();\
+  directions[0] = (directionData){.angle=currentHeading+90, .distance=0, .isTurn=true}; // turn 90 degrees     
+  directions[1] = (directionData){.angle=currentHeading+90, .distance=65, .isTurn=false}; // straight 100
+  directions[2] = (directionData){.angle=currentHeading, .distance=0, .isTurn=true}; // turn -90
+
+  directions[3] = (directionData){.angle=currentHeading, .distance=250, .isTurn=false}; // straight 250
+
+  //directions[4] = (directionData){.angle=currentHeading, .distance=85, .isTurn=false}; // straight 200
+  //directions[5] = (directionData){.angle=currentHeading+60, .distance=0, .isTurn=true}; // turn 60
+  //directions[6] = (directionData){.angle=currentHeading+60, .distance=55, .isTurn=false}; // straight 70
+  //directions[7] = (directionData){.angle=currentHeading, .distance=0, .isTurn=true}; // turn -60 degrees
+  //directions[8] = (directionData){.angle=currentHeading, .distance=100, .isTurn=false}; // straight 50
+  directions[4] = (directionData){.angle=0, .distance=0, .isTurn=false}; // stop  
+  isDeliberate = true;
+  
   Serial.begin(9600); // For debugging
   Serial.println("Setup");  
     Serial.println("Starting tasks");
@@ -250,13 +268,13 @@ void TaskControl(void *pvParameters) {
       vTaskDelay(250 / portTICK_PERIOD_MS); // Schedule to run every 250ms      
     }
 
-    if(!isObstacle && !isAvoidingObstacle) { // If no obstacle, go straight (to reach goal)
+    if(!isObstacle && !isAvoidingObstacle && !isDeliberate) { // If no obstacle, go straight (to reach goal)
       //Serial.println("Straight");
       directionDataAngle = 45;
       directionDataDistance = 50;
       isTurning = false;
       isDrivingStraight = true;
-    } else if(!isAvoidingObstacle) { // Try to go around obstacle.
+    } else if(!isAvoidingObstacle && !isDeliberate) { // Try to go around obstacle.
       //Serial.println("Setup avoidance");
       SimpleGyroNavigation();  // Pull sensors
       int16_t currentHeading = GetDegrees();      
@@ -276,18 +294,19 @@ void TaskControl(void *pvParameters) {
       isAvoidingObstacle = true;
     }
 
-    if(isAvoidingObstacle) {
+    if(isAvoidingObstacle || isDeliberate) {
       //Serial.println("Avoiding");
       // Get the next direction
       directionDataAngle = directions[directionIndex].angle;
       directionDataDistance = directions[directionIndex].distance;
       isTurning = directions[directionIndex].isTurn;
       isDrivingStraight = !isTurning;
-      if(directionDataAngle == 0 && directionDataDistance == 0) { // stop condition
+      if(directionDataAngle == 0 && directionDataDistance == 0 && isTurning == false) { // stop condition
         isAvoidingObstacle = false;
         isObstacle = false;
         isTurning = false;
         isDrivingStraight = false;
+        isDeliberate = false;
       }
       directionIndex++;
     }
