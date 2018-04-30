@@ -283,17 +283,17 @@ void TaskControl(void *pvParameters) {
       Motors(-100, -100);
       vTaskDelay(250 / portTICK_PERIOD_MS);
       Motors(0, 0);
-      directions[0] = (directionData){.angle=currentHeading+90, .distance=0, .isTurn=true}; // turn 90 degrees
-      directions[1] = (directionData){.angle=currentHeading+90, .distance=25 + obstacleAvoidanceGrowTerm, .isTurn=false}; // straight 25
-      directions[2] = (directionData){.angle=currentHeading, .distance=0, .isTurn=true}; // turn -90
-      directions[3] = (directionData){.angle=currentHeading, .distance=25 + obstacleAvoidanceGrowTerm, .isTurn=false}; // straight 50
-      directions[4] = (directionData){.angle=currentHeading-90, .distance=0, .isTurn=true}; // turn -90
-      directions[5] = (directionData){.angle=currentHeading-90, .distance=25 + obstacleAvoidanceGrowTerm, .isTurn=false}; // straight 25
-      directions[6] = (directionData){.angle=currentHeading, .distance=0, .isTurn=true}; // turn 90 degrees
-      directions[7] = (directionData){.angle=0, .distance=0, .isTurn=false}; // stop      
+      directions[0] = (directionData){.angle=45 + obstacleAvoidanceGrowTerm, .distance=0, .isTurn=true}; // turn 90 degrees
+      //directions[1] = (directionData){.angle=currentHeading+90, .distance=25 + obstacleAvoidanceGrowTerm, .isTurn=false}; // straight 25
+      //directions[2] = (directionData){.angle=currentHeading, .distance=0, .isTurn=true}; // turn -90
+      //directions[3] = (directionData){.angle=currentHeading, .distance=25 + obstacleAvoidanceGrowTerm, .isTurn=false}; // straight 50
+      //directions[4] = (directionData){.angle=currentHeading-90, .distance=0, .isTurn=true}; // turn -90
+      //directions[5] = (directionData){.angle=currentHeading-90, .distance=25 + obstacleAvoidanceGrowTerm, .isTurn=false}; // straight 25
+      //directions[6] = (directionData){.angle=currentHeading, .distance=0, .isTurn=true}; // turn 90 degrees
+      directions[1] = (directionData){.angle=0, .distance=0, .isTurn=false}; // stop      
       directionIndex = 0;
       isAvoidingObstacle = true;
-      obstacleAvoidanceGrowTerm = obstacleAvoidanceGrowTerm + 10;
+      obstacleAvoidanceGrowTerm = obstacleAvoidanceGrowTerm + 5;
     }
 
     if(isAvoidingObstacle || isDeliberate) {
@@ -309,6 +309,7 @@ void TaskControl(void *pvParameters) {
         isTurning = false;
         isDrivingStraight = false;
         isDeliberate = false;
+        //obstacleAvoidanceGrowTerm = 0;
       }
       directionIndex++;
     }
