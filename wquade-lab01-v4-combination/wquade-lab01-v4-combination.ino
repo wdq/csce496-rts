@@ -141,9 +141,6 @@ void TaskTurn(void *pvParameters) {
    // Task loop here
    while(1) { /* begin task loop */
     if(isTurning) { /* begin if turning 90 degrees */
-      SetPixelRGB( 4, 255, 0, 0); // Set the lights to red
-      SetPixelRGB( 5, 255, 0, 0);
-      RefreshPixels();
       PID pid = (PID){.kp=3, .ki=0, .kd=100, .integral=0, .error=0, .dt=25, .minimum=-90, .maximum=90}; // setup the PID controller
       Motors(0,0); // Make sure the motors have stopped before doing anything (todo: maybe a small delay?)
       //ZeroNavigation();
@@ -156,9 +153,6 @@ void TaskTurn(void *pvParameters) {
         if((abs(abs(setHeading) - abs(currentHeading)) == 0) || turnLoopCounter > 200) { // If we have reached set point, stop.
           Motors(0,0);
           isTurning = false; // Change modes
-          SetPixelRGB( 4, 0, 0, 0);
-          SetPixelRGB( 5, 0, 0, 0);
-          RefreshPixels();
           break; // Leave
         }
         int16_t output = CalculatePID(setHeading, currentHeading, &pid); // Calculate the PID control value
@@ -186,9 +180,6 @@ void TaskDriveStraight(void *pvParameters) {
    uint8_t straightLoopCounter = 0;
    while(1) { /* begin task loop */
     if(isDrivingStraight) { /* begin if driving straight */
-      SetPixelRGB( 4, 0, 0, 255); // set the lights to green
-      SetPixelRGB( 5, 0, 0, 255);
-      RefreshPixels();
       PID pid = (PID){.kp=50, .ki=0, .kd=0, .integral=0, .error=0, .dt=50, .minimum=-100, .maximum=100}; // setup the PID controller      
       Motors(0,0); // Make sure the motors have stopped before doing anything (todo: maybe a small delay?)
       //ZeroNavigation();
@@ -205,23 +196,17 @@ void TaskDriveStraight(void *pvParameters) {
           cyclesSinceCorrectionStraight++;
           cyclesSinceCorrectionLeft = 0;
           cyclesSinceCorrectionRight++;
-          SetPixelRGB( 3, 255, 0, 0);
-          RefreshPixels();   
           vTaskDelay(30 / portTICK_PERIOD_MS);    
         } else if(headingDiff < 0) { // Right
           Motors((int)abs(output), 0); 
           cyclesSinceCorrectionStraight++;
           cyclesSinceCorrectionLeft++;
           cyclesSinceCorrectionRight = 0;
-          SetPixelRGB( 3, 0, 255, 0);
-          RefreshPixels();  
           vTaskDelay(30 / portTICK_PERIOD_MS);
         } else {
           cyclesSinceCorrectionStraight = 0;
           cyclesSinceCorrectionLeft++;
           cyclesSinceCorrectionRight++;
-          SetPixelRGB( 3, 0, 0, 255);
-          RefreshPixels();
         }
         isObstacle = checkForObstacle();
 
@@ -231,17 +216,12 @@ void TaskDriveStraight(void *pvParameters) {
         // Originally I did a fixed run time before changing modes (in a third task), but had some issues with inconsistency from it sometimes being
         // stopped when it was turning right or left to correct the straight line driving, this guarantees that it always stops at the same spot, 
         // and doesn't require that I disable interrupts or anything. 
-        SetPixelRGB( 4, 0, straightLoopCounter, 0);
         if(straightLoopCounter == directionDataDistance) {
           straightLoopCounter = 0;
           //cyclesSinceCorrectionStraight = 0;
           //cyclesSinceCorrectionLeft = 0;
           //cyclesSinceCorrectionRight = 0;
           Motors(0,0);
-          SetPixelRGB( 3, 0, 0, 0);
-          SetPixelRGB( 4, 0, 0, 0);
-          SetPixelRGB( 5, 0, 0, 0);
-          RefreshPixels();
           isDrivingStraight = false; // Change modes
         }
         
