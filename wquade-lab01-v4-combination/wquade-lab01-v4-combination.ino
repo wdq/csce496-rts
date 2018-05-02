@@ -70,7 +70,6 @@ void ringoSetup() {
   //PlayStartChirp();       //Play startup chirp and blink eyes
   //NavigationBegin();
   //SimpleGyroNavigation(); 
-  SwitchMotorsToSerial(); //Call "SwitchMotorsToSerial()" before using Serial.print functions as motors & serial share a line
   RestartTimer();  
   NavigationBegin();  
 }
@@ -125,10 +124,7 @@ void setup(){
   directions[4] = (directionData){.angle=0, .distance=0, .isTurn=false}; // stop  
   isDeliberate = true;
   
-  Serial.begin(9600); // For debugging
-  Serial.println("Setup");  
-    Serial.println("Starting tasks");
-    taskSetup(); // Setup the tasks
+  taskSetup(); // Setup the tasks
 }
 
 // Don't do anything here since the tasks do the work
@@ -242,7 +238,6 @@ void TaskControl(void *pvParameters) {
    while(1) { /* begin task loop */
     //SimpleGyroNavigation(); 
     //int16_t currentHeading = GetDegrees();
-    //Serial.println(currentHeading);
     //vTaskDelay(100 / portTICK_PERIOD_MS); // Schedule to run every 100ms
 
     while(isDrivingStraight || isTurning) { // Wait for the straight or turn task to do its thing
@@ -250,13 +245,11 @@ void TaskControl(void *pvParameters) {
     }
 
     if(!isObstacle && !isAvoidingObstacle && !isDeliberate) { // If no obstacle, go straight (to reach goal)
-      //Serial.println("Straight");
       directionDataAngle = 45;
       directionDataDistance = 50;
       isTurning = false;
       isDrivingStraight = true;
     } else if(!isAvoidingObstacle && !isDeliberate) { // Try to go around obstacle.
-      //Serial.println("Setup avoidance");
       SimpleGyroNavigation();  // Pull sensors
       int16_t currentHeading = GetDegrees();      
       // todo: might want to back up too
@@ -277,7 +270,6 @@ void TaskControl(void *pvParameters) {
     }
 
     if(isAvoidingObstacle || isDeliberate) {
-      //Serial.println("Avoiding");
       // Get the next direction
       directionDataAngle = directions[directionIndex].angle;
       directionDataDistance = directions[directionIndex].distance;
